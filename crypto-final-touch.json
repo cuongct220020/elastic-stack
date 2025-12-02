@@ -1,0 +1,20 @@
+PUT _ingest/pipeline/crypto-final-touch
+{
+  "description": "Minimal pipeline: Set timestamp & calc lag",
+  "processors": [
+    {
+      "set": {
+        "field": "@timestamp",
+        "value": "{{{timestamp}}}",
+        "ignore_empty_value": true,
+        "description": "Copy business time to @timestamp for Kibana"
+      }
+    },
+    {
+      "script": {
+        "source": "ctx.ingest_lag_sec = (new Date().getTime() - ctx.timestamp.toInstant().toEpochMilli()) / 1000.0;",
+        "description": "Calculate freshness latency"
+      }
+    }
+  ]
+}
