@@ -1,15 +1,23 @@
-name: elastic-stack
+name: multi-node-elastic-stack
 
 services:
+
+  # Setup — generate TLS certs & set built-in user passwords (runs once)
   setup:
-    image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:${STACK_VERSION}
-    hostname: elastic-setup
+    build:
+      context: ./elasticsearch
+      dockerfile: Dockerfile
+    image: elasticsearch-custom:${STACK_VERSION}
     container_name: elastic-setup
-    volumes:
-      - certs:/usr/share/elasticsearch/config/certs
+    hostname: elastic-setup
     user: "0"
     networks:
       - elastic-net
+    volumes:
+      - certs:/usr/share/elasticsearch/config/certs
+    environment:
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - KIBANA_PASSWORD=${KIBANA_PASSWORD}
     command: >
       bash -c '
         if [ x${ELASTIC_PASSWORD} == x ]; then
@@ -50,7 +58,7 @@ services:
           bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
           unzip config/certs/certs.zip -d config/certs;
         fi;
-        echo "Setting file permissions"
+        echo "Setting file permissions";
         chown -R root:root config/certs;
         find . -type d -exec chmod 750 \{\} \;;
         find . -type f -exec chmod 640 \{\} \;;
@@ -66,159 +74,205 @@ services:
       timeout: 5s
       retries: 120
 
+  # ---------------------------------------------------------------------------
+  # Elasticsearch — node 01 (master-eligible, exposes port)
+  # ---------------------------------------------------------------------------
   es-01:
-    image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:${STACK_VERSION}
-    hostname: es-01
+    build:
+      context: ./elasticsearch
+      dockerfile: Dockerfile
+    image: elasticsearch-custom:${STACK_VERSION}
     container_name: es-01
-    networks:
-      - elastic-net
+    hostname: es-01
+    restart: unless-stopped
     depends_on:
       setup:
         condition: service_healthy
+    networks:
+      - elastic-net
+    ports:
+      - "${ES_PORT}:9200"
+    environment:
+      # Cluster
+      - cluster.initial_master_nodes=es-01,es-02,es-03
+      - cluster.name=${CLUSTER_NAME}
+      - discovery.seed_hosts=es-02,es-03
+      - node.name=es-01
+      # JVM / memory
+      - bootstrap.memory_lock=true
+      - xpack.ml.use_auto_machine_memory_percent=true
+      # Security
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - xpack.license.self_generated.type=${LICENSE}
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.certificate=certs/es-01/es-01.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=certs/es-01/es-01.key
+      - xpack.security.transport.ssl.certificate=certs/es-01/es-01.crt
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.key=certs/es-01/es-01.key
+      - xpack.security.transport.ssl.verification_mode=certificate
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - es-data-01:/usr/share/elasticsearch/data
-    ports:
-      - ${ES_PORT}:9200
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'"]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Elasticsearch — node 02
+  es-02:
+    build:
+      context: ./elasticsearch
+      dockerfile: Dockerfile
+    image: elasticsearch-custom:${STACK_VERSION}
+    container_name: es-02
+    hostname: es-02
+    restart: unless-stopped
+    depends_on:
+      es-01:
+        condition: service_healthy
+    networks:
+      - elastic-net
     environment:
-      - node.name=es-01
-      - cluster.name=${CLUSTER_NAME}
+      # Cluster
       - cluster.initial_master_nodes=es-01,es-02,es-03
-      - discovery.seed_hosts=es-02,es-03
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - cluster.name=${CLUSTER_NAME}
+      - discovery.seed_hosts=es-01,es-03
+      - node.name=es-02
+      # JVM / memory
       - bootstrap.memory_lock=true
-      - xpack.security.enabled=true
-      - xpack.security.http.ssl.enabled=true
-      - xpack.security.http.ssl.key=certs/es-01/es-01.key
-      - xpack.security.http.ssl.certificate=certs/es-01/es-01.crt
-      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
-      - xpack.security.transport.ssl.enabled=true
-      - xpack.security.transport.ssl.key=certs/es-01/es-01.key
-      - xpack.security.transport.ssl.certificate=certs/es-01/es-01.crt
-      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
-      - xpack.security.transport.ssl.verification_mode=certificate
-      - xpack.license.self_generated.type=${LICENSE}
       - xpack.ml.use_auto_machine_memory_percent=true
+      # Security
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - xpack.license.self_generated.type=${LICENSE}
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.certificate=certs/es-02/es-02.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=certs/es-02/es-02.key
+      - xpack.security.transport.ssl.certificate=certs/es-02/es-02.crt
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.key=certs/es-02/es-02.key
+      - xpack.security.transport.ssl.verification_mode=certificate
     ulimits:
       memlock:
         soft: -1
         hard: -1
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
-        ]
-      interval: 10s
-      timeout: 10s
-      retries: 120
-    deploy:
-      resources:
-        limits:
-          memory: 1024M
-
-  es-02:
-    image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:${STACK_VERSION}
-    hostname: es-02
-    container_name: es-02
-    networks:
-      - elastic-net
-    depends_on:
-      - es-01
+      nofile:
+        soft: 65536
+        hard: 65536
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - es-data-02:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'"]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Elasticsearch - Node 3
+  es-03:
+    build:
+      context: ./elasticsearch
+      dockerfile: Dockerfile
+    image: elasticsearch-custom:${STACK_VERSION}
+    container_name: es-03
+    hostname: es-03
+    restart: unless-stopped
+    depends_on:
+      es-02:
+        condition: service_healthy
+    networks:
+      - elastic-net
     environment:
-      - node.name=es-02
-      - cluster.name=${CLUSTER_NAME}
+      # Cluster
       - cluster.initial_master_nodes=es-01,es-02,es-03
-      - discovery.seed_hosts=es-01,es-03
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - cluster.name=${CLUSTER_NAME}
+      - discovery.seed_hosts=es-01,es-02
+      - node.name=es-03
+      # JVM / memory
       - bootstrap.memory_lock=true
-      - xpack.security.enabled=true
-      - xpack.security.http.ssl.enabled=true
-      - xpack.security.http.ssl.key=certs/es-02/es-02.key
-      - xpack.security.http.ssl.certificate=certs/es-02/es-02.crt
-      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
-      - xpack.security.transport.ssl.enabled=true
-      - xpack.security.transport.ssl.key=certs/es-02/es-02.key
-      - xpack.security.transport.ssl.certificate=certs/es-02/es-02.crt
-      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
-      - xpack.security.transport.ssl.verification_mode=certificate
-      - xpack.license.self_generated.type=${LICENSE}
       - xpack.ml.use_auto_machine_memory_percent=true
+      # Security
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - xpack.license.self_generated.type=${LICENSE}
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.certificate=certs/es-03/es-03.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=certs/es-03/es-03.key
+      - xpack.security.transport.ssl.certificate=certs/es-03/es-03.crt
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.key=certs/es-03/es-03.key
+      - xpack.security.transport.ssl.verification_mode=certificate
     ulimits:
       memlock:
         soft: -1
         hard: -1
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
-        ]
-      interval: 10s
-      timeout: 10s
-      retries: 120
-    deploy:
-      resources:
-        limits:
-          memory: 1024M
-
-  es-03:
-    image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:${STACK_VERSION}
-    hostname: es-03
-    container_name: es-03
-    networks:
-      - elastic-net
-    depends_on:
-      - es-02
+      nofile:
+        soft: 65536
+        hard: 65536
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - es-data-03:/usr/share/elasticsearch/data
-    environment:
-      - node.name=es-03
-      - cluster.name=${CLUSTER_NAME}
-      - cluster.initial_master_nodes=es-01,es-02,es-03
-      - discovery.seed_hosts=es-01,es-02
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-      - bootstrap.memory_lock=true
-      - xpack.security.enabled=true
-      - xpack.security.http.ssl.enabled=true
-      - xpack.security.http.ssl.key=certs/es-03/es-03.key
-      - xpack.security.http.ssl.certificate=certs/es-03/es-03.crt
-      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
-      - xpack.security.transport.ssl.enabled=true
-      - xpack.security.transport.ssl.key=certs/es-03/es-03.key
-      - xpack.security.transport.ssl.certificate=certs/es-03/es-03.crt
-      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
-      - xpack.security.transport.ssl.verification_mode=certificate
-      - xpack.license.self_generated.type=${LICENSE}
-      - xpack.ml.use_auto_machine_memory_percent=true
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
-        ]
+      test: ["CMD-SHELL", "curl -sf --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'"]
       interval: 10s
       timeout: 10s
       retries: 120
+      start_period: 40s
     deploy:
       resources:
         limits:
-          memory: 1024M
+          memory: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # Kibana Dashboard
   kibana:
-    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
-    hostname: kibana
+    build:
+      context: ./kibana
+      dockerfile: Dockerfile
+    image: kibana-custom:${STACK_VERSION}
     container_name: kibana
-    networks:
-      - elastic-net
+    hostname: kibana
+    restart: unless-stopped
     depends_on:
       es-01:
         condition: service_healthy
@@ -226,30 +280,43 @@ services:
         condition: service_healthy
       es-03:
         condition: service_healthy
+    networks:
+      - elastic-net
+    ports:
+      - "${KIBANA_PORT}:5601"
+    environment:
+      # Elasticsearch
+      - ELASTICSEARCH_HOSTS=https://es-01:9200
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+      - ELASTICSEARCH_USERNAME=kibana_system
+      # Server
+      - SERVERNAME=kibana
     volumes:
       - certs:/usr/share/kibana/config/certs
       - kibana-data:/usr/share/kibana/data
-    ports:
-      - ${KIBANA_PORT}:5601
-    environment:
-      - SERVERNAME=kibana
-      - ELASTICSEARCH_HOSTS=https://es-01:9200
-      - ELASTICSEARCH_USERNAME=kibana_system
-      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
-      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
-        ]
+      test: ["CMD-SHELL", "curl -sf http://localhost:5601/api/status | grep -q '\"overall\":{\"level\":\"available\"' || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 120
+      start_period: 60s
     deploy:
       resources:
         limits:
-          memory: 1024M
+          memory: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+networks:
+  elastic-net:
+    name: elastic-net
+    driver: bridge
+
 
 volumes:
   certs:
@@ -267,8 +334,3 @@ volumes:
   kibana-data:
     name: kibana-data
     driver: local
-
-networks:
-  elastic-net:
-    name: elastic-net
-    driver: bridge

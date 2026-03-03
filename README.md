@@ -1,11 +1,8 @@
 # Self-managed Elastic Cluster
 
-* Link để sau này vào đọc để ôn tập lại: 
-  * url1: https://gemini.google.com/app/0d7ad3155df9969d?hl=vi
+Modern Elastic Stack components:
 
-
-Modern "ELK" components:
-
-1. Elasticsearch (Database)
+1. Elasticsearch
 2. Kibana
-3. 
+3. Elastic Agent
+4. Fleet Server
