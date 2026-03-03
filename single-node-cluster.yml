@@ -1,0 +1,192 @@
+name: single-node-elastic-cluster
+
+services:
+  elasticsearch:
+    build:
+      context: ./elasticsearch
+      dockerfile: Dockerfile
+    image: elasticsearch-custom:${STACK_VERSION}
+    container_name: elasticsearch
+    hostname: elasticsearch
+    restart: unless-stopped
+    networks:
+      - elastic-net
+    ports:
+      - "${ES_PORT}:9200"
+    environment:
+      # Cluster
+      - cluster.name=single-node-cluster
+      - discovery.type=single-node
+      - node.name=elasticsearch
+      # GeoIP
+      - ingest.geoip.downloader.enabled=false
+      # CORS — allow browser clients (React / Vue / Postman)
+      - http.cors.allow-headers=X-Requested-With,Content-Type,Content-Length,Authorization
+      - http.cors.allow-origin="*"
+      - http.cors.enabled=true
+      # JVM
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
+      # Misc
+      - bootstrap.memory_lock=true
+      - TZ=UTC
+      # Security (disabled for dev)
+      - xpack.ml.enabled=false
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 3g        # headroom above ES heap (2 g)
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+  kibana:
+    build:
+      context: ./kibana
+      dockerfile: Dockerfile
+    image: kibana-custom:${STACK_VERSION}
+    container_name: kibana
+    hostname: kibana
+    restart: unless-stopped
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - elastic-net
+    ports:
+      - "${KIBANA_PORT}:5601"
+    environment:
+      # Elasticsearch
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_REQUESTTIMEOUT=90000
+      # Server
+      - SERVER_HOST=0.0.0.0
+      - SERVER_NAME=kibana
+      # Misc
+      - MONITORING_UI_CONTAINER_ELASTICSEARCH_ENABLED=true
+      - TELEMETRY_ENABLED=false
+      - TZ=UTC
+      # Disabled features
+      - XPACK_APM_ENABLED=false
+      - XPACK_ELASTIC_ASSISTANT_ENABLED=false
+      - XPACK_FLEET_AGENTS_ENABLED=false
+      - XPACK_FLEET_ENABLED=false
+      - XPACK_GRAPH_ENABLED=false
+      - XPACK_INFRA_SOURCES_DEFAULT_LOG_ALIAS=filebeat-*
+      - XPACK_INFRA_SOURCES_DEFAULT_METRIC_ALIAS=metricbeat-*
+      - XPACK_ML_ENABLED=false
+      - XPACK_OBSERVABILITY_AIASSISTANT_ENABLED=false
+      - XPACK_REPORTING_ENABLED=false
+      - XPACK_REPORTING_ROLES_ENABLED=false
+      - XPACK_SECURITY_ENABLED=false
+    volumes:
+      - kibana-data:/usr/share/kibana/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:5601/api/status | grep -q '\"overall\":{\"level\":\"available\"' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+  logstash:
+    build:
+      context: ./logstash
+      dockerfile: Dockerfile
+    image: logstash-custom:${STACK_VERSION}
+    container_name: logstash
+    hostname: logstash
+    profiles: [logstash]
+    restart: unless-stopped
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - elastic-net
+    ports:
+      - "${LOGSTASH_BEATS_PORT:-5044}:5044"       # Beats input
+      - "${LOGSTASH_TCP_PORT:-5000}:5000/tcp"      # TCP input
+      - "${LOGSTASH_UDP_PORT:-5000}:5000/udp"      # UDP input
+      - "${LOGSTASH_API_PORT:-9600}:9600"           # Monitoring API
+    environment:
+      # Elasticsearch
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      # JVM
+      - LS_JAVA_OPTS=-Xms512m -Xmx512m
+      # Node
+      - NODE_NAME=logstash
+      # Pipeline
+      - PIPELINE_BATCH_DELAY=50
+      - PIPELINE_BATCH_SIZE=125
+      - PIPELINE_WORKERS=1
+      # Misc
+      - LOG_LEVEL=info
+      - TZ=UTC
+      - XPACK_MONITORING_ENABLED=false
+    volumes:
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - logstash-data:/usr/share/logstash/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9600 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+networks:
+  elastic-net:
+    name: elastic-net
+    driver: bridge
+
+
+volumes:
+  es-data:
+    name: es-data
+    driver: local
+  kibana-data:
+    name: kibana-data
+    driver: local
+  logstash-data:
+    name: logstash-data
+    driver: local

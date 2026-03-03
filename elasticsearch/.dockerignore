@@ -1,5 +1,5 @@
 # Ignore Docker build files
-Dockerfile-elasticsearch
+Dockerfile
 .dockerignore
 
 # Ignore OS artifacts
