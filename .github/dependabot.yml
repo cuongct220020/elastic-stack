@@ -1,0 +1,65 @@
+version: 2
+updates:
+  # 1. Quản lý thư viện Python trong demo-app
+  - package-ecosystem: "pip"
+    directory: "/demo-app"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "chore(deps)"
+
+  # 2. Quản lý Docker images trong các Dockerfile và Docker Compose
+  - package-ecosystem: "docker"
+    directory: "/" # Quét thư mục gốc để tìm các file docker-compose.yml
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(docker)"
+
+  # Thêm các cấu hình quét Dockerfile ở các thư mục con
+  - package-ecosystem: "docker"
+    directory: "/demo-app"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "docker"
+    directory: "/elasticsearch"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "docker"
+    directory: "/kibana"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "docker"
+    directory: "/logstash"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "docker"
+    directory: "/fleet"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "docker"
+    directory: "/nginx"
+    schedule:
+      interval: "weekly"
+
+  # 3. Quản lý GitHub Actions workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore(actions)"
