@@ -1,0 +1,16 @@
+{
+  "index_patterns": ["logs-audit-*"],
+  "data_stream": { },
+  "priority": 200,
+  "composed_of": [
+    "ecs@mappings",
+    "logs@settings",
+    "audit-logs-mappings"
+  ],
+  "template": {
+    "settings": {
+      "index.lifecycle.name": "audit-logs-policy",
+      "index.default_pipeline": "audit-logs-pipeline"
+    }
+  }
+}
