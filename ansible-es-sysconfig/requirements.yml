@@ -1,0 +1,8 @@
+# requirements.yml
+# ansible-galaxy collection install -r requirements.yml
+
+collections:
+  - name: ansible.posix      # dùng cho module sysctl
+    version: ">=1.5"
+  - name: community.general  # optional — dùng nếu cần thêm modules
+    version: ">=7.0"

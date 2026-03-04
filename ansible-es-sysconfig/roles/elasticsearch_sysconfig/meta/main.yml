@@ -1,0 +1,13 @@
+# roles/elasticsearch_sysconfig/meta/main.yml
+galaxy_info:
+  role_name: elasticsearch_sysconfig
+  description: OS-level system configuration for Elasticsearch on Ubuntu (production)
+  author: your-team
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal    # 20.04
+        - jammy    # 22.04
+        - noble    # 24.04

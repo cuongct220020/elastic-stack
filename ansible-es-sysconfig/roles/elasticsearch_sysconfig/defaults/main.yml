@@ -1,0 +1,18 @@
+# roles/elasticsearch_sysconfig/defaults/main.yml
+# Default values — bị override bởi group_vars / host_vars
+
+es_user: elasticsearch
+es_group: elasticsearch
+
+es_data_dir: /var/lib/elasticsearch
+es_log_dir: /var/log/elasticsearch
+es_conf_dir: /etc/elasticsearch
+
+es_vm_max_map_count: 262144
+es_vm_swappiness: 1
+es_tcp_retries2: 5
+
+es_nofile_limit: 65535
+es_nproc_limit: 4096
+
+es_jna_tmpdir: /tmp/elasticsearch-jna

@@ -1,0 +1,21 @@
+# roles/elasticsearch_sysconfig/tasks/limits.yml
+---
+- name: Configure Elasticsearch resource limits (limits.d)
+  ansible.builtin.template:
+    src: elasticsearch-limits.conf.j2
+    dest: /etc/security/limits.d/99-elasticsearch.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Ensure pam_limits is loaded in common-session
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-session
+    line: "session required pam_limits.so"
+    state: present
+
+- name: Ensure pam_limits is loaded in common-session-noninteractive
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-session-noninteractive
+    line: "session required pam_limits.so"
+    state: present

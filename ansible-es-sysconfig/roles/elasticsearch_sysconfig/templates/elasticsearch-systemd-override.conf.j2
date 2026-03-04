@@ -1,0 +1,19 @@
+# roles/elasticsearch_sysconfig/templates/elasticsearch-systemd-override.conf.j2
+# Managed by Ansible — do not edit manually
+# Role: elasticsearch_sysconfig
+
+[Service]
+# Memory lock — required when bootstrap.memory_lock=true
+LimitMEMLOCK=infinity
+
+# File descriptors
+LimitNOFILE={{ es_nofile_limit }}
+
+# Threads
+LimitNPROC={{ es_nproc_limit }}
+
+# Prevent OOM killer from targeting Elasticsearch
+OOMScoreAdjust=-1000
+
+# JNA tmpdir — set explicitly if /tmp is noexec
+Environment=ES_TMPDIR={{ es_jna_tmpdir }}

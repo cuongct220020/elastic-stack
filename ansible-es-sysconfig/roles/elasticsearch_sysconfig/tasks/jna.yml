@@ -1,0 +1,28 @@
+# roles/elasticsearch_sysconfig/tasks/jna.yml
+---
+- name: Create JNA temporary directory
+  ansible.builtin.file:
+    path: "{{ es_jna_tmpdir }}"
+    state: directory
+    owner: "{{ es_user }}"
+    group: "{{ es_group }}"
+    mode: "0700"
+
+- name: Check if /tmp is mounted with noexec
+  ansible.builtin.shell: |
+    findmnt /tmp --output OPTIONS --noheadings | grep -q noexec && echo "noexec" || echo "ok"
+  register: tmp_mount_check
+  changed_when: false
+
+- name: Warn if /tmp is mounted noexec
+  ansible.builtin.debug:
+    msg: >
+      WARNING: /tmp is mounted with noexec.
+      JNA will fail. Either remount with exec or set ES_TMPDIR={{ es_jna_tmpdir }}
+      in the Elasticsearch service environment.
+  when: tmp_mount_check.stdout == "noexec"
+
+- name: Remount /tmp with exec if noexec
+  ansible.builtin.command: mount -o remount,exec /tmp
+  when: tmp_mount_check.stdout == "noexec"
+  notify: Persist tmp exec mount

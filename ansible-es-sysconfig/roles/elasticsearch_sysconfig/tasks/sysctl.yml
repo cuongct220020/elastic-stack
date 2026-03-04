@@ -1,0 +1,15 @@
+# roles/elasticsearch_sysconfig/tasks/sysctl.yml
+---
+- name: Apply Elasticsearch sysctl settings
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_file: /etc/sysctl.d/99-elasticsearch.conf
+    state: present
+    reload: true
+  loop:
+    - { key: vm.max_map_count,      value: "{{ es_vm_max_map_count }}" }
+    - { key: vm.swappiness,         value: "{{ es_vm_swappiness }}"    }
+    - { key: net.ipv4.tcp_retries2, value: "{{ es_tcp_retries2 }}"     }
+  loop_control:
+    label: "{{ item.key }} = {{ item.value }}"

@@ -1,0 +1,26 @@
+# inventory/group_vars/elasticsearch.yml
+# Biến dùng chung cho tất cả ES nodes
+
+# --- Service user ---
+es_user: elasticsearch
+es_group: elasticsearch
+
+# --- Directories ---
+es_data_dir: /var/lib/elasticsearch
+es_log_dir: /var/log/elasticsearch
+es_conf_dir: /etc/elasticsearch
+
+# --- JVM heap (nên = 50% RAM, tối đa 31g) ---
+es_heap_size: 2g
+
+# --- sysctl ---
+es_vm_max_map_count: 262144
+es_vm_swappiness: 1
+es_tcp_retries2: 5
+
+# --- limits ---
+es_nofile_limit: 65535
+es_nproc_limit: 4096
+
+# --- JNA tmpdir ---
+es_jna_tmpdir: /tmp/elasticsearch-jna
