@@ -1,9 +1,8 @@
-name: multi-node-elastic-stack
+name: multi-node-elastic-cluster
 
 services:
-
   # Setup — generate TLS certs & set built-in user passwords (runs once)
-  setup:
+  elastic-setup:
     build:
       context: ./elasticsearch
       dockerfile: Dockerfile
@@ -86,7 +85,7 @@ services:
     hostname: es-01
     restart: unless-stopped
     depends_on:
-      setup:
+      elastic-setup:
         condition: service_healthy
     networks:
       - elastic-net
@@ -124,12 +123,17 @@ services:
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - es-data-01:/usr/share/elasticsearch/data
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'"]
-      interval: 10s
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf --cacert config/certs/ca/ca.crt -u elastic:${ELASTIC_PASSWORD} https://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"
+        ]
+      interval: 15s
       timeout: 10s
-      retries: 120
-      start_period: 40s
+      retries: 20
+      start_period: 120s
     deploy:
       resources:
         limits:
@@ -150,7 +154,7 @@ services:
     hostname: es-02
     restart: unless-stopped
     depends_on:
-      es-01:
+      elastic-setup:
         condition: service_healthy
     networks:
       - elastic-net
@@ -186,12 +190,17 @@ services:
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - es-data-02:/usr/share/elasticsearch/data
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'"]
-      interval: 10s
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf --cacert config/certs/ca/ca.crt -u elastic:${ELASTIC_PASSWORD} https://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"
+        ]
+      interval: 15s
       timeout: 10s
-      retries: 120
-      start_period: 40s
+      retries: 20
+      start_period: 120s
     deploy:
       resources:
         limits:
@@ -212,7 +221,7 @@ services:
     hostname: es-03
     restart: unless-stopped
     depends_on:
-      es-02:
+      elastic-setup:
         condition: service_healthy
     networks:
       - elastic-net
@@ -248,12 +257,17 @@ services:
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - es-data-03:/usr/share/elasticsearch/data
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'"]
-      interval: 10s
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf --cacert config/certs/ca/ca.crt -u elastic:${ELASTIC_PASSWORD} https://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"
+        ]
+      interval: 15s
       timeout: 10s
-      retries: 120
-      start_period: 40s
+      retries: 20
+      start_period: 120s
     deploy:
       resources:
         limits:
@@ -292,19 +306,98 @@ services:
       - ELASTICSEARCH_USERNAME=kibana_system
       # Server
       - SERVERNAME=kibana
+      # Encryption keys
+      - KIBANA_ENCRYPTION_KEY=${KIBANA_ENCRYPTION_KEY}
+      - KIBANA_REPORTING_KEY=${KIBANA_REPORTING_KEY}
+      - KIBANA_SECURITY_KEY=${KIBANA_SECURITY_KEY}
     volumes:
       - certs:/usr/share/kibana/config/certs
       - kibana-data:/usr/share/kibana/data
+      - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:5601/api/status | grep -q '\"overall\":{\"level\":\"available\"' || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:5601/api/status | grep -q '\"overall\":{\"level\":\"available\"' || exit 1"
+        ]
       interval: 10s
       timeout: 10s
-      retries: 120
-      start_period: 60s
+      retries: 30
+      start_period: 150s
     deploy:
       resources:
         limits:
           memory: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+  logstash:
+    build:
+      context: ./logstash
+      dockerfile: Dockerfile
+    image: logstash-custom:${STACK_VERSION}
+    container_name: logstash
+    hostname: logstash
+    profiles: [ logstash ]
+    restart: unless-stopped
+    depends_on:
+      es-01:
+        condition: service_healthy
+      es-02:
+        condition: service_healthy
+      es-03:
+        condition: service_healthy
+    networks:
+      - elastic-net
+    ports:
+      - "${LOGSTASH_BEATS_PORT:-5044}:5044"
+      - "${LOGSTASH_TCP_PORT:-5000}:5000/tcp"
+      - "${LOGSTASH_UDP_PORT:-5000}:5000/udp"
+      - "${LOGSTASH_API_PORT:-9600}:9600"
+    environment:
+      # Elasticsearch — HTTPS + load balance across all 3 nodes
+      - ELASTICSEARCH_HOSTS=https://es-01:9200,https://es-02:9200,https://es-03:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
+      - ELASTICSEARCH_SSL_CERTIFICATE_AUTHORITY=/usr/share/logstash/config/certs/ca/ca.crt
+      - ELASTICSEARCH_SSL_ENABLED=true
+      # JVM — tune to container memory (512m heap for 1g limit)
+      - LS_JAVA_OPTS=-Xms512m -Xmx512m
+      # Node
+      - NODE_NAME=logstash
+      # Pipeline — scale workers to available CPUs
+      - PIPELINE_WORKERS=${LOGSTASH_PIPELINE_WORKERS:-2}
+      - PIPELINE_BATCH_SIZE=${LOGSTASH_BATCH_SIZE:-250}
+      - PIPELINE_BATCH_DELAY=50
+      # Misc
+      - LOG_LEVEL=${LOGSTASH_LOG_LEVEL:-warn}
+      - TZ=UTC
+      - XPACK_MONITORING_ENABLED=false
+    volumes:
+      - certs:/usr/share/logstash/config/certs:ro        # TLS CA cert
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - logstash-data:/usr/share/logstash/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:9600/_node/stats > /dev/null || exit 1"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s        # Logstash khởi động chậm hơn các service khác
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 768m          # Đảm bảo Logstash luôn có đủ RAM
     logging:
       driver: json-file
       options:
@@ -333,4 +426,7 @@ volumes:
     driver: local
   kibana-data:
     name: kibana-data
+    driver: local
+  logstash-data:
+    name: logstash-data
     driver: local

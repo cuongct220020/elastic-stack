@@ -1,9 +1,6 @@
----
-## Default Elasticsearch configuration from Elasticsearch base image.
-## https://github.com/elastic/elasticsearch/blob/main/distribution/docker/src/docker/config/elasticsearch.yml
-#
-cluster.name: docker-cluster
 network.host: 0.0.0.0
 
-xpack.license.self_generated.type: trial
-xpack.security.enabled: true
+# Production hardening
+action.destructive_requires_name: true
+indices.memory.index_buffer_size: 20%
+thread_pool.write.queue_size: 1000
