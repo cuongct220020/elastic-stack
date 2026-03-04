@@ -1,11 +1,11 @@
-name: multi-node-elastic-cluster
+name: elk-multi-node-cluster
 
 services:
   # Setup — generate TLS certs & set built-in user passwords (runs once)
   elastic-setup:
     build:
-      context: ./elasticsearch
-      dockerfile: Dockerfile
+      context: elasticsearch
+      dockerfile: elasticsearch/Dockerfile
     image: elasticsearch-custom:${STACK_VERSION}
     container_name: elastic-setup
     hostname: elastic-setup
@@ -78,8 +78,8 @@ services:
   # ---------------------------------------------------------------------------
   es-01:
     build:
-      context: ./elasticsearch
-      dockerfile: Dockerfile
+      context: elasticsearch
+      dockerfile: elasticsearch/Dockerfile
     image: elasticsearch-custom:${STACK_VERSION}
     container_name: es-01
     hostname: es-01
@@ -147,8 +147,8 @@ services:
   # Elasticsearch — node 02
   es-02:
     build:
-      context: ./elasticsearch
-      dockerfile: Dockerfile
+      context: elasticsearch
+      dockerfile: elasticsearch/Dockerfile
     image: elasticsearch-custom:${STACK_VERSION}
     container_name: es-02
     hostname: es-02
@@ -214,8 +214,8 @@ services:
   # Elasticsearch - Node 3
   es-03:
     build:
-      context: ./elasticsearch
-      dockerfile: Dockerfile
+      context: elasticsearch
+      dockerfile: elasticsearch/Dockerfile
     image: elasticsearch-custom:${STACK_VERSION}
     container_name: es-03
     hostname: es-03
@@ -281,8 +281,8 @@ services:
   # Kibana Dashboard
   kibana:
     build:
-      context: ./kibana
-      dockerfile: Dockerfile
+      context: kibana
+      dockerfile: kibana/Dockerfile
     image: kibana-custom:${STACK_VERSION}
     container_name: kibana
     hostname: kibana
@@ -337,8 +337,8 @@ services:
 
   logstash:
     build:
-      context: ./logstash
-      dockerfile: Dockerfile
+      context: logstash
+      dockerfile: logstash/Dockerfile
     image: logstash-custom:${STACK_VERSION}
     container_name: logstash
     hostname: logstash

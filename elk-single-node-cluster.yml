@@ -1,10 +1,10 @@
-name: single-node-elastic-cluster
+name: elk-single-node-cluster
 
 services:
   elasticsearch:
     build:
-      context: ./elasticsearch
-      dockerfile: Dockerfile
+      context: elasticsearch
+      dockerfile: elasticsearch/Dockerfile
     image: elasticsearch-custom:${STACK_VERSION}
     container_name: elasticsearch
     hostname: elasticsearch
@@ -63,8 +63,8 @@ services:
 
   kibana:
     build:
-      context: ./kibana
-      dockerfile: Dockerfile
+      context: kibana
+      dockerfile: kibana/Dockerfile
     image: kibana-custom:${STACK_VERSION}
     container_name: kibana
     hostname: kibana
@@ -121,8 +121,8 @@ services:
 
   logstash:
     build:
-      context: ./logstash
-      dockerfile: Dockerfile
+      context: logstash
+      dockerfile: logstash/Dockerfile
     image: logstash-custom:${STACK_VERSION}
     container_name: logstash
     hostname: logstash
