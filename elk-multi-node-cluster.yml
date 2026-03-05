@@ -53,6 +53,12 @@ services:
           "      - localhost\n"\
           "    ip:\n"\
           "      - 127.0.0.1\n"\
+          "  - name: kibana\n"\
+          "    dns:\n"\
+          "      - kibana\n"\
+          "      - localhost\n"\
+          "    ip:\n"\
+          "      - 127.0.0.1\n"\
           "  - name: fleet-server\n"\
           "    dns:\n"\
           "      - fleet-server\n"\
@@ -324,6 +330,10 @@ services:
       - KIBANA_ENCRYPTION_KEY=${KIBANA_ENCRYPTION_KEY}
       - KIBANA_REPORTING_KEY=${KIBANA_REPORTING_KEY}
       - KIBANA_SECURITY_KEY=${KIBANA_SECURITY_KEY}
+      # HTTPS cho Kibana server
+      - SERVER_SSL_ENABLED=true
+      - SERVER_SSL_CERTIFICATE=config/certs/kibana/kibana.crt
+      - SERVER_SSL_KEY=config/certs/kibana/kibana.key
     volumes:
       - certs:/usr/share/kibana/config/certs
       - kibana-data:/usr/share/kibana/data
@@ -332,7 +342,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "curl -sf http://localhost:5601/api/status | grep -q '\"overall\":{\"level\":\"available\"' || exit 1"
+          "curl -sf --cacert config/certs/ca/ca.crt https://localhost:5601/api/status | grep -q '\"overall\":{\"level\":\"available\"' || exit 1"
         ]
       interval: 10s
       timeout: 10s
