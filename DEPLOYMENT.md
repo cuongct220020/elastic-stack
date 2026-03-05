@@ -1,27 +1,4 @@
-# Elastic Stack — Deployment Guide (Audit Logs)
-
-## Cấu trúc thư mục
-
-```
-elastic-stack/
-├── .env
-├── docker-compose.yml          ← Phase 1: ES + Kibana
-├── docker-compose.fleet.yml    ← Phase 2: Fleet Server + Agent
-├── elasticsearch/
-│   ├── Dockerfile
-│   └── config/
-│       └── elasticsearch.yml
-├── kibana/
-│   ├── Dockerfile
-│   └── config/
-│       └── kibana.yml
-└── logstash/                   (tuỳ chọn)
-    ├── Dockerfile
-    ├── config/
-    └── pipeline/
-```
-
----
+# Elastic Stack — Deployment Guide
 
 ## Prereqs (chạy 1 lần trên host)
 
@@ -129,7 +106,7 @@ Copy giá trị `token.value` → paste vào `FLEET_SERVER_SERVICE_TOKEN` trong 
 ### Bước 8 — Khởi động Fleet Server
 
 ```bash
-docker compose -f docker-compose.fleet.yml up -d fleet-server
+docker compose -f fleet-compose.yml up -d fleet-server
 
 # Theo dõi log
 docker logs -f fleet-server
@@ -156,7 +133,7 @@ curl -sf \
 
 ```bash
 # Deploy 1 agent (mặc định)
-docker compose -f docker-compose.fleet.yml up -d elastic-agent
+docker compose -f fleet-compose.yml up -d elastic-agent
 
 # Scale lên nhiều agents
 docker compose -f docker-compose.fleet.yml up -d --scale elastic-agent=3
@@ -191,8 +168,7 @@ curl -sf \
 
 ```bash
 # Xem status tất cả
-docker compose ps
-docker compose -f docker-compose.fleet.yml ps
+docker compose -f fleet-compose.yml ps
 
 # Restart một service
 docker compose restart kibana
@@ -202,11 +178,11 @@ docker compose logs -f es-01
 docker logs -f fleet-server
 
 # Scale agents
-docker compose -f docker-compose.fleet.yml up -d --scale elastic-agent=5
+docker compose -f fleet-compose.yml up -d --scale elastic-agent=5
 
 # Dừng toàn bộ (giữ data)
 docker compose down
-docker compose -f docker-compose.fleet.yml down
+docker compose -f fleet-compose.yml down
 
 # Xoá hoàn toàn (XOÁ DATA — cẩn thận!)
 docker compose down -v
