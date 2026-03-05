@@ -1,0 +1,17 @@
+# roles/elasticsearch_sysconfig/tasks/user.yml
+---
+- name: Create Elasticsearch system group
+  ansible.builtin.group:
+    name: "{{ es_group }}"
+    system: true
+    state: present
+
+- name: Create Elasticsearch system user
+  ansible.builtin.user:
+    name: "{{ es_user }}"
+    group: "{{ es_group }}"
+    system: true
+    create_home: false
+    shell: /sbin/nologin
+    comment: "Elasticsearch service user"
+    state: present

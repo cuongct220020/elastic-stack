@@ -1,11 +1,11 @@
-name: elk-multi-node-cluster
+name: elastic-stack
 
 services:
   # Setup — generate TLS certs & set built-in user passwords (runs once)
   elastic-setup:
     build:
-      context: elasticsearch
-      dockerfile: elasticsearch/Dockerfile
+      context: ./elasticsearch
+      dockerfile: Dockerfile
     image: elasticsearch-custom:${STACK_VERSION}
     container_name: elastic-setup
     hostname: elastic-setup
@@ -53,6 +53,12 @@ services:
           "      - localhost\n"\
           "    ip:\n"\
           "      - 127.0.0.1\n"\
+          "  - name: fleet-server\n"\
+          "    dns:\n"\
+          "      - fleet-server\n"\
+          "      - localhost\n"\
+          "    ip:\n"\
+          "      - 127.0.0.1\n"\
           > config/certs/instances.yml;
           bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
           unzip config/certs/certs.zip -d config/certs;
@@ -73,13 +79,11 @@ services:
       timeout: 5s
       retries: 120
 
-  # ---------------------------------------------------------------------------
-  # Elasticsearch — node 01 (master-eligible, exposes port)
-  # ---------------------------------------------------------------------------
+  # ELASTICSEARCH — NODE 01 (master-eligible, exposes port)
   es-01:
     build:
-      context: elasticsearch
-      dockerfile: elasticsearch/Dockerfile
+      context: ./elasticsearch
+      dockerfile: Dockerfile
     image: elasticsearch-custom:${STACK_VERSION}
     container_name: es-01
     hostname: es-01
@@ -93,26 +97,29 @@ services:
       - "${ES_PORT}:9200"
     environment:
       # Cluster
-      - cluster.initial_master_nodes=es-01,es-02,es-03
       - cluster.name=${CLUSTER_NAME}
+      - cluster.initial_master_nodes=es-01,es-02,es-03
       - discovery.seed_hosts=es-02,es-03
       - node.name=es-01
       # JVM / memory
+      - ES_JAVA_OPTS=-Xms${ES_HEAP_SIZE:-1g} -Xmx${ES_HEAP_SIZE:-1g}
       - bootstrap.memory_lock=true
       - xpack.ml.use_auto_machine_memory_percent=true
       # Security
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - xpack.license.self_generated.type=${LICENSE}
       - xpack.security.enabled=true
-      - xpack.security.http.ssl.certificate=certs/es-01/es-01.crt
-      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+
       - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.certificate=certs/es-01/es-01.crt
       - xpack.security.http.ssl.key=certs/es-01/es-01.key
-      - xpack.security.transport.ssl.certificate=certs/es-01/es-01.crt
-      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+
       - xpack.security.transport.ssl.enabled=true
-      - xpack.security.transport.ssl.key=certs/es-01/es-01.key
       - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.certificate=certs/es-01/es-01.crt
+      - xpack.security.transport.ssl.key=certs/es-01/es-01.key
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
     ulimits:
       memlock:
         soft: -1
@@ -137,18 +144,18 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1g
+          memory: ${ES_MEM_LIMIT:-2g}
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
 
-  # Elasticsearch — node 02
+  # ELASTICSEARCH — NODE 02
   es-02:
     build:
-      context: elasticsearch
-      dockerfile: elasticsearch/Dockerfile
+      context: ./elasticsearch
+      dockerfile: Dockerfile
     image: elasticsearch-custom:${STACK_VERSION}
     container_name: es-02
     hostname: es-02
@@ -160,26 +167,29 @@ services:
       - elastic-net
     environment:
       # Cluster
-      - cluster.initial_master_nodes=es-01,es-02,es-03
       - cluster.name=${CLUSTER_NAME}
-      - discovery.seed_hosts=es-01,es-03
+      - cluster.initial_master_nodes=es-01,es-02,es-03
+      - discovery.seed_hosts=es-02,es-03
       - node.name=es-02
       # JVM / memory
+      - ES_JAVA_OPTS=-Xms${ES_HEAP_SIZE:-1g} -Xmx${ES_HEAP_SIZE:-1g}
       - bootstrap.memory_lock=true
       - xpack.ml.use_auto_machine_memory_percent=true
       # Security
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - xpack.license.self_generated.type=${LICENSE}
       - xpack.security.enabled=true
-      - xpack.security.http.ssl.certificate=certs/es-02/es-02.crt
-      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+
       - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.certificate=certs/es-02/es-02.crt
       - xpack.security.http.ssl.key=certs/es-02/es-02.key
-      - xpack.security.transport.ssl.certificate=certs/es-02/es-02.crt
-      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+
       - xpack.security.transport.ssl.enabled=true
-      - xpack.security.transport.ssl.key=certs/es-02/es-02.key
       - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.certificate=certs/es-02/es-02.crt
+      - xpack.security.transport.ssl.key=certs/es-02/es-02.key
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
     ulimits:
       memlock:
         soft: -1
@@ -204,18 +214,18 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1g
+          memory: ${ES_MEM_LIMIT:-2g}
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
 
-  # Elasticsearch - Node 3
+  # ELASTICSEARCH - NODE 3
   es-03:
     build:
-      context: elasticsearch
-      dockerfile: elasticsearch/Dockerfile
+      context: ./elasticsearch
+      dockerfile: Dockerfile
     image: elasticsearch-custom:${STACK_VERSION}
     container_name: es-03
     hostname: es-03
@@ -227,26 +237,29 @@ services:
       - elastic-net
     environment:
       # Cluster
-      - cluster.initial_master_nodes=es-01,es-02,es-03
       - cluster.name=${CLUSTER_NAME}
+      - cluster.initial_master_nodes=es-01,es-02,es-03
       - discovery.seed_hosts=es-01,es-02
       - node.name=es-03
       # JVM / memory
+      - ES_JAVA_OPTS=-Xms${ES_HEAP_SIZE:-1g} -Xmx${ES_HEAP_SIZE:-1g}
       - bootstrap.memory_lock=true
       - xpack.ml.use_auto_machine_memory_percent=true
       # Security
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - xpack.license.self_generated.type=${LICENSE}
       - xpack.security.enabled=true
-      - xpack.security.http.ssl.certificate=certs/es-03/es-03.crt
-      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+
       - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.certificate=certs/es-03/es-03.crt
       - xpack.security.http.ssl.key=certs/es-03/es-03.key
-      - xpack.security.transport.ssl.certificate=certs/es-03/es-03.crt
-      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      - xpack.security.http.ssl.certificate_authorities=certs/ca/ca.crt
+
       - xpack.security.transport.ssl.enabled=true
-      - xpack.security.transport.ssl.key=certs/es-03/es-03.key
       - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.certificate=certs/es-03/es-03.crt
+      - xpack.security.transport.ssl.key=certs/es-03/es-03.key
+      - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
     ulimits:
       memlock:
         soft: -1
@@ -271,18 +284,19 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1g
+          memory: ${ES_MEM_LIMIT:-2g}
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
 
-  # Kibana Dashboard
+
+  # KIBANA DASHBOARD
   kibana:
     build:
-      context: kibana
-      dockerfile: kibana/Dockerfile
+      context: ./kibana
+      dockerfile: Dockerfile
     image: kibana-custom:${STACK_VERSION}
     container_name: kibana
     hostname: kibana
@@ -301,9 +315,9 @@ services:
     environment:
       # Elasticsearch
       - ELASTICSEARCH_HOSTS=https://es-01:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
       - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
-      - ELASTICSEARCH_USERNAME=kibana_system
       # Server
       - SERVERNAME=kibana
       # Encryption keys
@@ -327,14 +341,14 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1g
+          memory: ${KIBANA_MEM_LIMIT:-1g}
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
 
-
+  # LOGSTASH
   logstash:
     build:
       context: logstash
@@ -379,9 +393,9 @@ services:
       - XPACK_MONITORING_ENABLED=false
     volumes:
       - certs:/usr/share/logstash/config/certs:ro        # TLS CA cert
+      - logstash-data:/usr/share/logstash/data
       - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
-      - logstash-data:/usr/share/logstash/data
     healthcheck:
       test:
         [

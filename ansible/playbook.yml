@@ -1,0 +1,8 @@
+# playbook.yml
+---
+- name: Configure OS for Elasticsearch (production)
+  hosts: elasticsearch
+  become: true  # sudo
+
+  roles:
+    - role: elasticsearch_sysconfig

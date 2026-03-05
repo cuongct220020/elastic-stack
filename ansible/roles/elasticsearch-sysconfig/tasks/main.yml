@@ -1,0 +1,36 @@
+# roles/elasticsearch_sysconfig/tasks/main.yml
+---
+- name: Validate OS
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Ubuntu"
+    fail_msg: "This role only supports Ubuntu. Detected: {{ ansible_distribution }}"
+    success_msg: "OS check passed: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+- name: Include service user tasks
+  ansible.builtin.import_tasks: user.yml
+  tags: [user]
+
+- name: Include directory tasks
+  ansible.builtin.import_tasks: directories.yml
+  tags: [directories]
+
+- name: Include swap tasks
+  ansible.builtin.import_tasks: swap.yml
+  tags: [swap]
+
+- name: Include sysctl tasks
+  ansible.builtin.import_tasks: sysctl.yml
+  tags: [sysctl]
+
+- name: Include limits tasks
+  ansible.builtin.import_tasks: limits.yml
+  tags: [limits]
+
+- name: Include JNA tmpdir tasks
+  ansible.builtin.import_tasks: jna.yml
+  tags: [jna]
+
+- name: Include systemd override tasks
+  ansible.builtin.import_tasks: systemd.yml
+  tags: [systemd]

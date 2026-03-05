@@ -1,0 +1,22 @@
+# roles/elasticsearch_sysconfig/tasks/swap.yml
+---
+- name: Disable swap immediately
+  ansible.builtin.command: swapoff -a
+  changed_when: false  # idempotent — safe to run even if already off
+
+- name: Disable swap permanently in /etc/fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^(\s*[^#\s].+\bswap\b.+)$'
+    replace: '# \1  # disabled by ansible es-sysconfig'
+    backup: true   # creates /etc/fstab.bak
+
+- name: Verify swap is off
+  ansible.builtin.command: swapon --show
+  register: swap_status
+  changed_when: false
+  failed_when: false
+
+- name: Report swap status
+  ansible.builtin.debug:
+    msg: "{{ 'Swap is OFF' if swap_status.stdout == '' else 'WARNING: Swap still active: ' + swap_status.stdout }}"

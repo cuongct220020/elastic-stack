@@ -1,0 +1,15 @@
+# roles/elasticsearch_sysconfig/templates/elasticsearch-limits.conf.j2
+# Managed by Ansible — do not edit manually
+# Role: elasticsearch_sysconfig
+
+# File descriptors
+{{ es_user }}  soft  nofile  {{ es_nofile_limit }}
+{{ es_user }}  hard  nofile  {{ es_nofile_limit }}
+
+# Threads
+{{ es_user }}  soft  nproc   {{ es_nproc_limit }}
+{{ es_user }}  hard  nproc   {{ es_nproc_limit }}
+
+# Memory lock (required for bootstrap.memory_lock=true)
+{{ es_user }}  soft  memlock  unlimited
+{{ es_user }}  hard  memlock  unlimited

@@ -1,16 +1,28 @@
-import logging
-import ecs_logging
-import time
-from random import randint
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
 
-logger = logging.getLogger("audit-sim")
-logger.setLevel(logging.INFO)
-handler = logging.FileHandler('audit_simulation.json')
-handler.setFormatter(ecs_logging.StdlibFormatter())
-logger.addHandler(handler)
+from database import db_instance
+from logger import audit_logger
+from routers import items
 
-while True:
-    # Mô phỏng các sự kiện kiểm toán khác nhau
-    logger.info("User 'admin' changed system configuration",
-                extra={"event.action": "config_change", "user.name": "admin"})
-    time.sleep(randint(1, 5))
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Hệ thống khởi động
+    db_instance.connect()
+    audit_logger.info("Application startup: Connected to MongoDB", extra={"event.action": "app_startup", "event.category": ["process"]})
+    
+    yield
+    
+    # Hệ thống tắt
+    db_instance.close()
+    audit_logger.info("Application shutdown: Disconnected from MongoDB", extra={"event.action": "app_shutdown", "event.category": ["process"]})
+
+app = FastAPI(lifespan=lifespan, title="Demo Audit CRUD App")
+
+# Đăng ký các module API
+app.include_router(items.router)
+
+@app.get("/health", tags=["System"])
+async def health_check():
+    """Endpoint dùng cho Docker/Nginx healthcheck"""
+    return {"status": "ok", "message": "Service is running"}

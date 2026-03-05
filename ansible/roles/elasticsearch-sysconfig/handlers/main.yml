@@ -1,0 +1,11 @@
+# roles/elasticsearch_sysconfig/handlers/main.yml
+---
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Persist tmp exec mount
+  ansible.builtin.debug:
+    msg: >
+      ACTION REQUIRED: Add 'exec' option to /tmp entry in /etc/fstab
+      to persist across reboots.

@@ -1,0 +1,13 @@
+# roles/elasticsearch_sysconfig/tasks/directories.yml
+---
+- name: Ensure Elasticsearch directories exist with correct permissions
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ es_user }}"
+    group: "{{ es_group }}"
+    mode: "0750"
+  loop:
+    - "{{ es_data_dir }}"
+    - "{{ es_log_dir }}"
+    - "{{ es_conf_dir }}"

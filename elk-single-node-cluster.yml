@@ -1,4 +1,4 @@
-name: elk-single-node-cluster
+name: elastic-stack
 
 services:
   elasticsearch:

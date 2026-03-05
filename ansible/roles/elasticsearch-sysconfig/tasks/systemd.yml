@@ -1,0 +1,30 @@
+# roles/elasticsearch_sysconfig/tasks/systemd.yml
+---
+- name: Check if elasticsearch.service exists
+  ansible.builtin.stat:
+    path: /lib/systemd/system/elasticsearch.service
+  register: es_service_file
+
+- name: Create systemd override directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/elasticsearch.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: es_service_file.stat.exists
+
+- name: Write systemd resource override
+  ansible.builtin.template:
+    src: elasticsearch-systemd-override.conf.j2
+    dest: /etc/systemd/system/elasticsearch.service.d/override.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: es_service_file.stat.exists
+  notify: Reload systemd daemon
+
+- name: Skip systemd override (Docker environment)
+  ansible.builtin.debug:
+    msg: "elasticsearch.service not found — skipping systemd override (likely Docker)."
+  when: not es_service_file.stat.exists
