@@ -30,21 +30,22 @@ xpack.fleet.outputs:
     hosts: [ "https://es-01:9200", "https://es-02:9200", "https://es-03:9200" ]
     is_default: true
     is_default_monitoring: true
-    config_yaml: |
-      ssl.certificate_authorities: ["/usr/share/elastic-agent/config/certs/ca/ca.crt"]
+    ssl:
+      certificate_authorities:
+        - "/usr/share/elastic-agent/config/certs/ca/ca.crt"
 
 
 xpack.fleet.packages:
   - name: fleet_server
-    version: ${FLEET_SERVER_PKG_VERSION:9.3.1}
+    version: latest
   - name: system
-    version: ${SYSTEM_PKG_VERSION:1.51.0}
+    version: latest
   - name: elastic_agent
-    version: ${ELASTIC_AGENT_PKG_VERSION:9.3.1}
+    version: latest
   - name: docker
-    version: ${DOCKER_PKG_VERSION:1.52.0}
+    version: latest
   - name: apm
-    version: ${APM_PKG_VERSION:9.3.1}
+    version: latest
 
 xpack.fleet.agentPolicies:
   - name: Fleet Server Policy
@@ -57,18 +58,44 @@ xpack.fleet.agentPolicies:
       - name: fleet_server-1
         package:
           name: fleet_server
-      - name: system-1
-        package:
-          name: system
-      - name: elastic_agent-1
-        package:
-          name: elastic_agent
-      - name: docker-1
-        package:
-          name: docker
-  - name: Agent Policy APM Server
-    id: agent-policy-apm-server
-    description: Static agent policy for the APM Server integration
+#      - name: system-1
+#        package:
+#          name: system
+#      - name: elastic_agent-1
+#        package:
+#          name: elastic_agent
+#      - name: docker-1
+#        package:
+#          name: docker
+#  - name: Agent Policy APM Server
+#    id: agent-policy-apm-server
+#    description: Static agent policy for the APM Server integration
+#    monitoring_enabled:
+#      - logs
+#      - metrics
+#    package_policies:
+#      - name: system-1
+#        package:
+#          name: system
+#      - name: elastic_agent-1
+#        package:
+#          name: elastic_agent
+#      - name: apm-1
+#        package:
+#          name: apm
+#        # See the APM package manifest for a list of possible inputs.
+#        # https://github.com/elastic/integrations/blob/d62b684/packages/apm/manifest.yml#L44-L174
+#        inputs:
+#          - type: apm
+#            vars:
+#              - name: host
+#                value: 0.0.0.0:8200
+#              - name: url
+#                value: http://apm-server:8200
+
+  - name: General Agent Policy
+    id: general-agent-policy
+    description: Policy for general Elastic Agents
     monitoring_enabled:
       - logs
       - metrics
@@ -79,15 +106,10 @@ xpack.fleet.agentPolicies:
       - name: elastic_agent-1
         package:
           name: elastic_agent
-      - name: apm-1
+      - name: docker-1
         package:
-          name: apm
-        # See the APM package manifest for a list of possible inputs.
-        # https://github.com/elastic/integrations/blob/d62b684/packages/apm/manifest.yml#L44-L174
-        inputs:
-          - type: apm
-            vars:
-              - name: host
-                value: 0.0.0.0:8200
-              - name: url
-                value: http://apm-server:8200
+          name: docker
+
+
+xpack.fleet.agentless.enabled: false
+xpack.slo.enabled: false

@@ -326,7 +326,7 @@ services:
       - "${KIBANA_PORT}:5601"
     environment:
       # Elasticsearch
-      - ELASTICSEARCH_HOSTS=https://es-01:9200
+      - ELASTICSEARCH_HOSTS=["https://es-01:9200","https://es-02:9200","https://es-03:9200"]
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
       - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
