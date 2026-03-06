@@ -30,21 +30,22 @@ xpack.fleet.outputs:
     hosts: [ "https://es-01:9200", "https://es-02:9200", "https://es-03:9200" ]
     is_default: true
     is_default_monitoring: true
-    config_yaml: |
-      ssl.certificate_authorities: ["/usr/share/elastic-agent/config/certs/ca/ca.crt"]
+    ssl:
+      certificate_authorities:
+        - "/usr/share/elastic-agent/config/certs/ca/ca.crt"
 
 
 xpack.fleet.packages:
   - name: fleet_server
-    version: ${FLEET_SERVER_PKG_VERSION:9.3.1}
+    version: latest
   - name: system
-    version: ${SYSTEM_PKG_VERSION:1.51.0}
+    version: latest
   - name: elastic_agent
-    version: ${ELASTIC_AGENT_PKG_VERSION:9.3.1}
+    version: latest
   - name: docker
-    version: ${DOCKER_PKG_VERSION:1.52.0}
+    version: latest
   - name: apm
-    version: ${APM_PKG_VERSION:9.3.1}
+    version: latest
 
 xpack.fleet.agentPolicies:
   - name: Fleet Server Policy
@@ -91,3 +92,7 @@ xpack.fleet.agentPolicies:
                 value: 0.0.0.0:8200
               - name: url
                 value: http://apm-server:8200
+
+
+xpack.fleet.agentless.enabled: false
+xpack.slo.enabled: false

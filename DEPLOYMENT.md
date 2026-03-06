@@ -1,9 +1,10 @@
-# Elastic Stack — Deployment Guide
+# Manual Deployment Guide
 
 ## Prereqs (chạy 1 lần trên host)
+Nếu không 
 
 ```bash
-# Tăng vm.max_map_count cho Elasticsearch
+# Tăng vm.max_map_count cho Elasticsearch (Linux Only)
 sudo sysctl -w vm.max_map_count=262144
 echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
 
@@ -11,7 +12,6 @@ echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
 docker compose version   # cần >= 2.20
 ```
 
----
 
 ## Phase 1 — Bootstrap Core (Elasticsearch + Kibana)
 
@@ -28,54 +28,17 @@ openssl rand -hex 32   # chạy 3 lần, paste vào KIBANA_ENCRYPTION_KEY / REPO
 ### Bước 2 — Build images
 
 ```bash
-docker compose build --no-cache
+docker compose -f elk-multi-node-cluster.yml build
+docker compose -f fleet-compose.yml build
+
 ```
 
 ### Bước 3 — Khởi động Phase 1
 
 ```bash
-docker compose up -d
+docker compose -f elk-multi-node-cluster.yml up -d
 ```
 
-### Bước 4 — Theo dõi tiến trình setup
-
-```bash
-# Xem log của setup container (sẽ tự thoát khi xong)
-docker logs -f elastic-setup
-
-# Theo dõi health tất cả services
-watch -n 5 'docker compose ps'
-```
-
-**Timeline dự kiến:**
-| Thời gian | Sự kiện |
-|-----------|---------|
-| 0–30s     | Setup tạo CA + certs |
-| 30–120s   | ES nodes khởi động, form cluster |
-| 120–180s  | Setup đặt kibana_system password |
-| 180–360s  | Kibana healthy |
-
-### Bước 5 — Xác nhận cluster healthy
-
-```bash
-# Cluster health
-docker exec es-01 curl -sf \
-  --cacert config/certs/ca/ca.crt \
-  -u elastic:cuongct123123 \
-  https://localhost:9200/_cluster/health?pretty
-
-# Kỳ vọng: "status": "green", "number_of_nodes": 3
-
-# Mở Kibana
-open http://localhost:5601
-# Login: elastic / <ELASTIC_PASSWORD>
-```
-
----
-
-## Phase 2 — Fleet Server + Elastic Agent
-
-> ⚠️ **Phase 1 phải healthy hoàn toàn trước khi chạy Phase 2.**
 
 ### Bước 6 — Lấy Fleet Server Service Token
 
@@ -136,7 +99,7 @@ curl -sf \
 docker compose -f fleet-compose.yml up -d elastic-agent
 
 # Scale lên nhiều agents
-docker compose -f docker-compose.fleet.yml up -d --scale elastic-agent=3
+docker compose -f fleet-compose.yml up -d --scale elastic-agent=3
 ```
 
 ### Bước 11 — Xác nhận agents đã enrolled
@@ -148,7 +111,7 @@ docker compose -f docker-compose.fleet.yml up -d --scale elastic-agent=3
 # Hoặc qua API
 curl -sf \
   -u "elastic:cuongct123123" \
-  "http://localhost:9200/api/fleet/agents" | python3 -m json.tool
+  "https://localhost:9200/api/fleet/agents" | python3 -m json.tool
 ```
 
 ---
@@ -207,3 +170,9 @@ docker compose -f docker-compose.fleet.yml down -v 2>/dev/null; true
 docker compose down -v
 docker volume prune -f
 ```
+
+cuongct090_04@MacBook-Air-cua-Cuong-CT elastic-stack % docker cp es-01:/usr/share/elasticsearch/config/certs/ca/ca.crt /tmp/ca.crt
+
+Successfully copied 3.07kB to /tmp/ca.crt
+cuongct090_04@MacBook-Air-cua-Cuong-CT elastic-stack % openssl x509 -fingerprint -sha256 -noout -in /tmp/ca.crt | sed 's/.*=//' | tr -d ':'
+93BD388E323A8DB9963861B0CC8A0F85BC00E97CC15A0BB938A233041A99ED05
