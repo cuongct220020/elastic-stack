@@ -58,18 +58,44 @@ xpack.fleet.agentPolicies:
       - name: fleet_server-1
         package:
           name: fleet_server
-      - name: system-1
-        package:
-          name: system
-      - name: elastic_agent-1
-        package:
-          name: elastic_agent
-      - name: docker-1
-        package:
-          name: docker
-  - name: Agent Policy APM Server
-    id: agent-policy-apm-server
-    description: Static agent policy for the APM Server integration
+#      - name: system-1
+#        package:
+#          name: system
+#      - name: elastic_agent-1
+#        package:
+#          name: elastic_agent
+#      - name: docker-1
+#        package:
+#          name: docker
+#  - name: Agent Policy APM Server
+#    id: agent-policy-apm-server
+#    description: Static agent policy for the APM Server integration
+#    monitoring_enabled:
+#      - logs
+#      - metrics
+#    package_policies:
+#      - name: system-1
+#        package:
+#          name: system
+#      - name: elastic_agent-1
+#        package:
+#          name: elastic_agent
+#      - name: apm-1
+#        package:
+#          name: apm
+#        # See the APM package manifest for a list of possible inputs.
+#        # https://github.com/elastic/integrations/blob/d62b684/packages/apm/manifest.yml#L44-L174
+#        inputs:
+#          - type: apm
+#            vars:
+#              - name: host
+#                value: 0.0.0.0:8200
+#              - name: url
+#                value: http://apm-server:8200
+
+  - name: General Agent Policy
+    id: general-agent-policy
+    description: Policy for general Elastic Agents
     monitoring_enabled:
       - logs
       - metrics
@@ -80,18 +106,9 @@ xpack.fleet.agentPolicies:
       - name: elastic_agent-1
         package:
           name: elastic_agent
-      - name: apm-1
+      - name: docker-1
         package:
-          name: apm
-        # See the APM package manifest for a list of possible inputs.
-        # https://github.com/elastic/integrations/blob/d62b684/packages/apm/manifest.yml#L44-L174
-        inputs:
-          - type: apm
-            vars:
-              - name: host
-                value: 0.0.0.0:8200
-              - name: url
-                value: http://apm-server:8200
+          name: docker
 
 
 xpack.fleet.agentless.enabled: false
