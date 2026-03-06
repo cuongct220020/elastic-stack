@@ -1,5 +1,5 @@
 fastapi==0.135.1
 uvicorn==0.41.0
 motor==3.4.0
-pydantic==2.6.4
+pydantic==2.12.5
 ecs_logging==2.3.0
