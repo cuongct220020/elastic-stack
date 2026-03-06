@@ -1,17 +1,11 @@
 server.name: kibana
 server.host: 0.0.0.0
 
-# UI config
+## UI config
 monitoring.ui.container.elasticsearch.enabled: true
 monitoring.ui.container.logstash.enabled: true
 
-# Encryption keys
-xpack.security.encryptionKey: ${KIBANA_ENCRYPTION_KEY}
-xpack.encryptedSavedObjects.encryptionKey: ${KIBANA_ENCRYPTION_KEY}
-xpack.reporting.encryptionKey: ${KIBANA_REPORTING_KEY}
-
-
-## Encryption keys (optional but highly recommended)
+## Encryption keys
 ##
 ## Generate with either
 ##  $ docker compose up kibana-genkeys
@@ -20,77 +14,80 @@ xpack.reporting.encryptionKey: ${KIBANA_REPORTING_KEY}
 ## https://www.elastic.co/docs/deploy-manage/security/self-setup
 ## https://www.elastic.co/docs/reference/kibana/commands/kibana-encryption-keys
 #
-#xpack.security.encryptionKey:
-#xpack.encryptedSavedObjects.encryptionKey:
-#xpack.reporting.encryptionKey:
+xpack.security.encryptionKey: ${KIBANA_ENCRYPTION_KEY}
+xpack.encryptedSavedObjects.encryptionKey: ${KIBANA_ENCRYPTION_KEY}
+xpack.reporting.encryptionKey: ${KIBANA_REPORTING_KEY}
 
 ## Fleet
 ## https://www.elastic.co/docs/reference/kibana/configuration-reference/fleet-settings
-#
-#xpack.fleet.agents.fleet_server.hosts: [ http://fleet-server:8220 ]
-#
-#xpack.fleet.outputs:
-#  - id: fleet-default-output
-#    name: default
-#    type: elasticsearch
-#    hosts: [ http://elasticsearch:9200 ]
-#    is_default: true
-#    is_default_monitoring: true
-#
-#xpack.fleet.packages:
-#  - name: fleet_server
-#    version: latest
-#  - name: system
-#    version: latest
-#  - name: elastic_agent
-#    version: latest
-#  - name: docker
-#    version: latest
-#  - name: apm
-#    version: latest
-#
-#xpack.fleet.agentPolicies:
-#  - name: Fleet Server Policy
-#    id: fleet-server-policy
-#    description: Static agent policy for Fleet Server
-#    monitoring_enabled:
-#      - logs
-#      - metrics
-#    package_policies:
-#      - name: fleet_server-1
-#        package:
-#          name: fleet_server
-#      - name: system-1
-#        package:
-#          name: system
-#      - name: elastic_agent-1
-#        package:
-#          name: elastic_agent
-#      - name: docker-1
-#        package:
-#          name: docker
-#  - name: Agent Policy APM Server
-#    id: agent-policy-apm-server
-#    description: Static agent policy for the APM Server integration
-#    monitoring_enabled:
-#      - logs
-#      - metrics
-#    package_policies:
-#      - name: system-1
-#        package:
-#          name: system
-#      - name: elastic_agent-1
-#        package:
-#          name: elastic_agent
-#      - name: apm-1
-#        package:
-#          name: apm
-#        # See the APM package manifest for a list of possible inputs.
-#        # https://github.com/elastic/integrations/blob/d62b684/packages/apm/manifest.yml#L44-L174
-#        inputs:
-#          - type: apm
-#            vars:
-#              - name: host
-#                value: 0.0.0.0:8200
-#              - name: url
-#                value: http://apm-server:8200
+
+xpack.fleet.agents.fleet_server.hosts: [ https://fleet-server:8220 ]
+
+xpack.fleet.outputs:
+  - id: fleet-default-output
+    name: default
+    type: elasticsearch
+    hosts: [ "https://es-01:9200", "https://es-02:9200", "https://es-03:9200" ]
+    is_default: true
+    is_default_monitoring: true
+    config_yaml: |
+      ssl.certificate_authorities: ["/usr/share/elastic-agent/config/certs/ca/ca.crt"]
+
+
+xpack.fleet.packages:
+  - name: fleet_server
+    version: ${FLEET_SERVER_PKG_VERSION:9.3.1}
+  - name: system
+    version: ${SYSTEM_PKG_VERSION:1.51.0}
+  - name: elastic_agent
+    version: ${ELASTIC_AGENT_PKG_VERSION:9.3.1}
+  - name: docker
+    version: ${DOCKER_PKG_VERSION:1.52.0}
+  - name: apm
+    version: ${APM_PKG_VERSION:9.3.1}
+
+xpack.fleet.agentPolicies:
+  - name: Fleet Server Policy
+    id: fleet-server-policy
+    description: Static agent policy for Fleet Server
+    monitoring_enabled:
+      - logs
+      - metrics
+    package_policies:
+      - name: fleet_server-1
+        package:
+          name: fleet_server
+      - name: system-1
+        package:
+          name: system
+      - name: elastic_agent-1
+        package:
+          name: elastic_agent
+      - name: docker-1
+        package:
+          name: docker
+  - name: Agent Policy APM Server
+    id: agent-policy-apm-server
+    description: Static agent policy for the APM Server integration
+    monitoring_enabled:
+      - logs
+      - metrics
+    package_policies:
+      - name: system-1
+        package:
+          name: system
+      - name: elastic_agent-1
+        package:
+          name: elastic_agent
+      - name: apm-1
+        package:
+          name: apm
+        # See the APM package manifest for a list of possible inputs.
+        # https://github.com/elastic/integrations/blob/d62b684/packages/apm/manifest.yml#L44-L174
+        inputs:
+          - type: apm
+            vars:
+              - name: host
+                value: 0.0.0.0:8200
+              - name: url
+                value: http://apm-server:8200
