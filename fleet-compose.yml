@@ -33,6 +33,8 @@ services:
       - KIBANA_FLEET_USERNAME=elastic
       - KIBANA_FLEET_PASSWORD=${ELASTIC_PASSWORD}
       - KIBANA_FLEET_CA=/usr/share/elastic-agent/config/certs/ca/ca.crt
+      # Timezone
+      - TZ=Asia/Ho_Chi_Minh
     volumes:
       - certs:/usr/share/elastic-agent/config/certs:ro
       - fleet-data:/usr/share/elastic-agent/data
@@ -77,6 +79,7 @@ services:
       - FLEET_ENROLLMENT_TOKEN=${ELASTIC_AGENT_ENROLLMENT_TOKEN}
       - FLEET_SERVER_CERT_AUTH=/usr/share/elastic-agent/config/certs/ca/ca.crt  # FLEET_CA → FLEET_SERVER_CERT_AUTH
       - ELASTICSEARCH_CA=/usr/share/elastic-agent/config/certs/ca/ca.crt
+      - TZ=Asia/Ho_Chi_Minh
     volumes:
       - certs:/usr/share/elastic-agent/config/certs:ro
       # Mount host paths for system/log collection (adjust as needed)

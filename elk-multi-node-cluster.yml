@@ -126,6 +126,8 @@ services:
       - xpack.security.transport.ssl.certificate=certs/es-01/es-01.crt
       - xpack.security.transport.ssl.key=certs/es-01/es-01.key
       - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      # Timezone
+      - TZ=Asia/Ho_Chi_Minh
     ulimits:
       memlock:
         soft: -1
@@ -196,6 +198,8 @@ services:
       - xpack.security.transport.ssl.certificate=certs/es-02/es-02.crt
       - xpack.security.transport.ssl.key=certs/es-02/es-02.key
       - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      # Timezone
+      - TZ=Asia/Ho_Chi_Minh
     ulimits:
       memlock:
         soft: -1
@@ -266,6 +270,8 @@ services:
       - xpack.security.transport.ssl.certificate=certs/es-03/es-03.crt
       - xpack.security.transport.ssl.key=certs/es-03/es-03.key
       - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
+      # Timezone
+      - TZ=Asia/Ho_Chi_Minh
     ulimits:
       memlock:
         soft: -1
@@ -334,6 +340,8 @@ services:
       - SERVER_SSL_ENABLED=true
       - SERVER_SSL_CERTIFICATE=config/certs/kibana/kibana.crt
       - SERVER_SSL_KEY=config/certs/kibana/kibana.key
+      # Timezone
+      - TZ=Asia/Ho_Chi_Minh
     volumes:
       - certs:/usr/share/kibana/config/certs
       - kibana-data:/usr/share/kibana/data
@@ -399,7 +407,7 @@ services:
       - PIPELINE_BATCH_DELAY=50
       # Misc
       - LOG_LEVEL=${LOGSTASH_LOG_LEVEL:-warn}
-      - TZ=UTC
+      - TZ=Asia/Ho_Chi_Minh
       - XPACK_MONITORING_ENABLED=false
     volumes:
       - certs:/usr/share/logstash/config/certs:ro        # TLS CA cert

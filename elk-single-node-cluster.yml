@@ -28,7 +28,7 @@ services:
       - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
       # Misc
       - bootstrap.memory_lock=true
-      - TZ=UTC
+      - TZ=Asia/Ho_Chi_Minh
       # Security (disabled for dev)
       - xpack.ml.enabled=false
       - xpack.security.enabled=false
@@ -86,7 +86,7 @@ services:
       # Misc
       - MONITORING_UI_CONTAINER_ELASTICSEARCH_ENABLED=true
       - TELEMETRY_ENABLED=false
-      - TZ=UTC
+      - TZ=Asia/Ho_Chi_Minh
       # Disabled features
       - XPACK_APM_ENABLED=false
       - XPACK_ELASTIC_ASSISTANT_ENABLED=false
@@ -151,7 +151,7 @@ services:
       - PIPELINE_WORKERS=1
       # Misc
       - LOG_LEVEL=info
-      - TZ=UTC
+      - TZ=Asia/Ho_Chi_Minh
       - XPACK_MONITORING_ENABLED=false
     volumes:
       - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
