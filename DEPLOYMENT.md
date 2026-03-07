@@ -1,11 +1,13 @@
 # Elastic Stack - Manual Deployment Guide
 
+![fleet-server.png](docs/images/fleet-server.png)
+
+
 ## Prerequisites
 
 - Docker and Docker Compose installed
 - `.env` file configured with all required variables
 - Ports available: `9200`, `5601`, `8220`
-
 
 ## First-Time Deployment
 
