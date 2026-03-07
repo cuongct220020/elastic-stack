@@ -3,12 +3,14 @@
 - name: Create Elasticsearch system group
   ansible.builtin.group:
     name: "{{ es_group }}"
+    gid: 1000
     system: true
     state: present
 
 - name: Create Elasticsearch system user
   ansible.builtin.user:
     name: "{{ es_user }}"
+    uid: 1000
     group: "{{ es_group }}"
     system: true
     create_home: false

@@ -33,9 +33,13 @@ services:
       - KIBANA_FLEET_USERNAME=elastic
       - KIBANA_FLEET_PASSWORD=${ELASTIC_PASSWORD}
       - KIBANA_FLEET_CA=/usr/share/elastic-agent/config/certs/ca/ca.crt
+      # Timezone
+      - TZ=Asia/Ho_Chi_Minh
+      - ELASTIC_AGENT_LOG_LEVEL=error
     volumes:
       - certs:/usr/share/elastic-agent/config/certs:ro
       - fleet-data:/usr/share/elastic-agent/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     healthcheck:
       test:
         [
@@ -57,7 +61,7 @@ services:
         max-file: "5"
 
 
-  # ELASTIC AGENT  (scale with: docker compose up -d --scale elastic-agent=N)
+  # ELASTIC AGENT  (scale with: docker compose -f fleet-compose.yml up -d --scale elastic-agent=N)
   elastic-agent:
     build:
       context: ./beats/agent
@@ -77,6 +81,9 @@ services:
       - FLEET_ENROLLMENT_TOKEN=${ELASTIC_AGENT_ENROLLMENT_TOKEN}
       - FLEET_SERVER_CERT_AUTH=/usr/share/elastic-agent/config/certs/ca/ca.crt  # FLEET_CA → FLEET_SERVER_CERT_AUTH
       - ELASTICSEARCH_CA=/usr/share/elastic-agent/config/certs/ca/ca.crt
+      # MISC
+      - TZ=Asia/Ho_Chi_Minh
+      - ELASTIC_AGENT_LOG_LEVEL=error
     volumes:
       - certs:/usr/share/elastic-agent/config/certs:ro
       # Mount host paths for system/log collection (adjust as needed)
