@@ -72,7 +72,7 @@ bash setup_elastic_stack.sh --fleet-only  # redeploy Fleet Server + Agent only
 
 ### Manual deployment
 
-For a step-by-step walkthrough with explanations, see [DEPLOYMENT.md](DEPLOYMENT.md).
+For a step-by-step walkthrough with explanations, see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ### Useful scripts
 
@@ -103,3 +103,10 @@ Where  → source.ip
 Why    → reason (optional)
 How    → event.type / http.method
 ```
+
+Todolist: 
+- Định nghĩa lại schema, index template, component template cho bài toán audit logs.
+- Định nghĩa là schema cho document của MonngoDB.
+- Tìm hiểu thêm về MongoDB, Nginx (đặc biệt là Nginx)
+- Triển khai FastAPI application. 
+- Phân tích Logs trên Kibana. 
