@@ -1,178 +1,209 @@
-# Manual Deployment Guide
+# Elastic Stack - Manual Deployment Guide
 
-## Prereqs (chạy 1 lần trên host)
-Nếu không 
+## Prerequisites
 
-```bash
-# Tăng vm.max_map_count cho Elasticsearch (Linux Only)
-sudo sysctl -w vm.max_map_count=262144
-echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
-
-# Kiểm tra Docker Compose plugin
-docker compose version   # cần >= 2.20
-```
+- Docker and Docker Compose installed
+- `.env` file configured with all required variables
+- Ports available: `9200`, `5601`, `8220`
 
 
-## Phase 1 — Bootstrap Core (Elasticsearch + Kibana)
+## First-Time Deployment
 
-### Bước 1 — Chuẩn bị .env
-
-```bash
-# Đổi passwords mạnh hơn trong production
-vi .env
-
-# Tạo 3 encryption keys khác nhau (QUAN TRỌNG với production)
-openssl rand -hex 32   # chạy 3 lần, paste vào KIBANA_ENCRYPTION_KEY / REPORTING_KEY / SECURITY_KEY
-```
-
-### Bước 2 — Build images
+### Step 1: Build images
 
 ```bash
 docker compose -f elk-multi-node-cluster.yml build
 docker compose -f fleet-compose.yml build
-
 ```
 
-### Bước 3 — Khởi động Phase 1
+### Step 2: Start the core stack
 
 ```bash
 docker compose -f elk-multi-node-cluster.yml up -d
 ```
 
-
-### Bước 6 — Lấy Fleet Server Service Token
-
-**Cách 1 — qua API (khuyến nghị cho automation):**
+Wait until all services are healthy:
 
 ```bash
-docker exec es-01 curl -sf -X POST \
-  --cacert config/certs/ca/ca.crt \
-  -u "elastic:cuongct123123" \
-  "https://localhost:9200/_security/service/elastic/fleet-server/credential/token/fleet-token-1" \
+docker ps --format "table {{.Names}}\t{{.Status}}"
+```
+
+All of `es-01`, `es-02`, `es-03`, and `kibana` must show `(healthy)` before proceeding.
+
+### Step 3: Create the Fleet Server service token
+
+This must be an API-based token (stored in the ES cluster, not a file), so it replicates across all nodes.
+
+```bash
+export ELASTIC_PASSWORD=$(grep ^ELASTIC_PASSWORD .env | cut -d= -f2)
+
+CA_PATH=$(docker inspect es-01 --format='{{range .Mounts}}{{if eq .Destination "/usr/share/elasticsearch/config/certs"}}{{.Source}}{{end}}{{end}}')/ca/ca.crt
+
+curl -sk -u elastic:${ELASTIC_PASSWORD} \
+  --cacert $CA_PATH \
+  -X POST "https://localhost:9200/_security/service/elastic/fleet-server/credential/token/fleet-token" \
   | python3 -m json.tool
 ```
 
-Copy giá trị `token.value` → paste vào `FLEET_SERVER_SERVICE_TOKEN` trong `.env`.
+Copy the `value` field from the output, then update `.env`:
 
-**Cách 2 — qua Kibana UI:**
-1. Kibana → Management → Fleet → Settings
-2. Click **Generate service token**
-3. Copy token → paste vào `.env`
+```bash
+sed -i '' "s/^FLEET_SERVER_SERVICE_TOKEN=.*/FLEET_SERVER_SERVICE_TOKEN=<token_value>/" .env
+```
 
-### Bước 7 — Tạo Fleet Server Policy trên Kibana
+### Step 4: Get the Elastic Agent enrollment token
 
-1. Kibana → Fleet → Agent policies → **Create agent policy**
-2. Đặt tên: `fleet-server-policy`
-3. Không cần thêm integrations cho Fleet Server
-4. Copy Policy ID → paste vào `FLEET_SERVER_POLICY_ID` trong `.env` (nếu khác default)
+**Option A: via CLI**
+```bash
+docker exec kibana curl -sk \
+  -u elastic:${ELASTIC_PASSWORD} \
+  "https://kibana:5601/api/fleet/enrollment_api_keys" \
+  -H "kbn-xsrf: true" \
+  | python3 -m json.tool \
+  | grep -B2 -A8 "general-agent-policy" \
+  | grep "api_key"
+```
 
-### Bước 8 — Khởi động Fleet Server
+Copy the value (format: `xxxxx:yyyyy`), then update `.env`:
+```bash
+sed -i '' "s/^ELASTIC_AGENT_ENROLLMENT_TOKEN=.*/ELASTIC_AGENT_ENROLLMENT_TOKEN=<token_value>/" .env
+```
+
+**Option B: via Kibana UI**
+
+1. Go to `Fleet` → `Enrollment tokens`
+2. Find the row with `Agent policy = General Agent Policy`
+3. Click the eye icon to reveal the token
+4. Copy and update `.env` manually
+
+
+### Step 5: Start Fleet Server
 
 ```bash
 docker compose -f fleet-compose.yml up -d fleet-server
-
-# Theo dõi log
-docker logs -f fleet-server
-# Kỳ vọng: "State changed to HEALTHY"
 ```
 
-### Bước 9 — Lấy Enrollment Token cho Elastic Agent
+Wait for healthy status:
 
-1. Kibana → Fleet → Enrollment tokens
-2. Click **Create enrollment token**
-3. Chọn policy cho agent (ví dụ: `audit-log-policy`)
-4. Copy token → paste vào `ELASTIC_AGENT_ENROLLMENT_TOKEN` trong `.env`
-
-**Hoặc qua API:**
 ```bash
-curl -sf \
-  --cacert <(docker exec es-01 cat config/certs/ca/ca.crt) \
-  -u "elastic:cuongct123123" \
-  "https://localhost:9200/api/fleet/enrollment_api_keys" \
-  -H "kbn-xsrf: true"
+until docker inspect fleet-server --format='{{.State.Health.Status}}' | grep -q healthy; do
+  echo "Waiting..."; sleep 10
+done && echo "Fleet Server is HEALTHY"
 ```
 
-### Bước 10 — Deploy Elastic Agents
+### Step 6: Start Elastic Agent
 
 ```bash
-# Deploy 1 agent (mặc định)
 docker compose -f fleet-compose.yml up -d elastic-agent
+```
 
-# Scale lên nhiều agents
+
+
+## Redeployment (after changes or restart)
+
+```bash
+# Stop fleet services
+docker compose -f fleet-compose.yml down
+
+# Remove fleet-data volume (required on every redeploy)
+docker volume rm fleet-data
+
+# Rotate the service token
+curl -sk -u elastic:${ELASTIC_PASSWORD} --cacert $CA_PATH \
+  -X DELETE "https://localhost:9200/_security/service/elastic/fleet-server/credential/token/fleet-token" \
+  | python3 -m json.tool
+
+curl -sk -u elastic:${ELASTIC_PASSWORD} --cacert $CA_PATH \
+  -X POST "https://localhost:9200/_security/service/elastic/fleet-server/credential/token/fleet-token" \
+  | python3 -m json.tool
+
+# Update .env, then redeploy
+docker compose -f fleet-compose.yml up -d fleet-server
+# Wait for healthy, then:
+docker compose -f fleet-compose.yml up -d elastic-agent
+```
+
+
+
+## Full Stack Rebuild
+
+```bash
+docker compose -f fleet-compose.yml down
+docker compose -f elk-multi-node-cluster.yml down
+
+docker volume rm fleet-data
+
+docker compose -f elk-multi-node-cluster.yml up -d --build
+# Wait for all nodes and kibana to be healthy, then repeat Steps 3-6 above
+docker compose -f fleet-compose.yml up -d --build fleet-server
+# Wait for healthy
+docker compose -f fleet-compose.yml up -d elastic-agent
+```
+
+
+## Scaling Elastic Agents
+
+```bash
 docker compose -f fleet-compose.yml up -d --scale elastic-agent=3
 ```
 
-### Bước 11 — Xác nhận agents đã enrolled
-
-```bash
-# Kiểm tra trong Kibana
-# Fleet → Agents — phải thấy agent(s) với status "Healthy"
-
-# Hoặc qua API
-curl -sf \
-  -u "elastic:cuongct123123" \
-  "https://localhost:9200/api/fleet/agents" | python3 -m json.tool
-```
-
----
-
-## Thiết lập Audit Log Integration
-
-### Bước 12 — Thêm System / Audit integration
-
-1. Kibana → Fleet → Agent policies → chọn policy của agent
-2. **Add integration** → tìm **"System"** hoặc **"Auditd Logs"**
-3. Cấu hình đường dẫn log (mặc định `/var/log/audit/audit.log`)
-4. Save → agents sẽ tự nhận config mới
-
----
-
-## Vận hành thường ngày
-
-```bash
-# Xem status tất cả
-docker compose -f fleet-compose.yml ps
-
-# Restart một service
-docker compose restart kibana
-
-# Xem logs realtime
-docker compose logs -f es-01
-docker logs -f fleet-server
-
-# Scale agents
-docker compose -f fleet-compose.yml up -d --scale elastic-agent=5
-
-# Dừng toàn bộ (giữ data)
-docker compose down
-docker compose -f fleet-compose.yml down
-
-# Xoá hoàn toàn (XOÁ DATA — cẩn thận!)
-docker compose down -v
-```
-
----
 
 ## Troubleshooting
 
-| Triệu chứng | Nguyên nhân thường gặp | Fix |
-|-------------|----------------------|-----|
-| ES không green | `vm.max_map_count` thấp | `sudo sysctl -w vm.max_map_count=262144` |
-| Setup loop | ES chưa ready | Đợi thêm, xem `docker logs elastic-setup` |
-| Fleet UNHEALTHY | Token sai / hết hạn | Tạo lại service token |
-| Agent không enroll | Enrollment token sai | Tạo lại token trong Kibana |
-| OOM kill | Heap quá lớn | Giảm `ES_HEAP_SIZE`, tăng `ES_MEM_LIMIT` |
-
-### Reset hoàn toàn (dev/test)
+### Check service health
 
 ```bash
-docker compose -f docker-compose.fleet.yml down -v 2>/dev/null; true
-docker compose down -v
-docker volume prune -f
+docker ps --format "table {{.Names}}\t{{.Status}}"
 ```
 
-cuongct090_04@MacBook-Air-cua-Cuong-CT elastic-stack % docker cp es-01:/usr/share/elasticsearch/config/certs/ca/ca.crt /tmp/ca.crt
+### View errors only
 
-Successfully copied 3.07kB to /tmp/ca.crt
-cuongct090_04@MacBook-Air-cua-Cuong-CT elastic-stack % openssl x509 -fingerprint -sha256 -noout -in /tmp/ca.crt | sed 's/.*=//' | tr -d ':'
-93BD388E323A8DB9963861B0CC8A0F85BC00E97CC15A0BB938A233041A99ED05
+```bash
+# Fleet Server
+docker logs fleet-server 2>&1 | grep '"log.level":"error"' | grep -v "timestamp_error" | tail -20
+
+# Elastic Agent
+docker logs $(docker ps -qf "name=elastic-fleet-elastic-agent") 2>&1 | grep -E "error|FAILED" | tail -20
+```
+
+### Verify service token is valid
+
+```bash
+# Check token exists and is cluster-wide (not file-based)
+curl -sk -u elastic:${ELASTIC_PASSWORD} --cacert $CA_PATH \
+  "https://localhost:9200/_security/service/elastic/fleet-server/credential" \
+  | python3 -m json.tool
+# tokens{} should be non-empty; file_tokens should be empty
+
+# Test token auth directly
+TOKEN=$(grep FLEET_SERVER_SERVICE_TOKEN .env | cut -d= -f2)
+curl -sk --cacert $CA_PATH \
+  -H "Authorization: Bearer $TOKEN" \
+  "https://localhost:9200/_security/_authenticate" | python3 -m json.tool
+```
+
+### Clean up offline agents
+
+```bash
+docker exec kibana curl -sk -X POST \
+  -u elastic:${ELASTIC_PASSWORD} \
+  "https://kibana:5601/api/fleet/agents/bulk_unenroll" \
+  -H "kbn-xsrf: true" \
+  -H "Content-Type: application/json" \
+  -d '{"agents": "status:offline", "revoke": true}'
+```
+
+### Check Elasticsearch cluster health
+
+```bash
+curl -sk -u elastic:${ELASTIC_PASSWORD} --cacert $CA_PATH \
+  "https://localhost:9200/_cluster/health?pretty"
+```
+
+
+## Key Notes
+
+- Always delete `fleet-data` volume before redeploying Fleet Server.
+- Always use API-based service tokens, not file-based (`elasticsearch-service-tokens` CLI creates file-based tokens that only exist on one node and will cause 401 errors on a multi-node cluster).
+- Elastic Agent must use `General Agent Policy` enrollment token, not the Fleet Server Policy token.
+- Fleet Server must be `(healthy)` before starting Elastic Agent.
