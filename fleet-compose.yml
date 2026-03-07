@@ -39,6 +39,7 @@ services:
     volumes:
       - certs:/usr/share/elastic-agent/config/certs:ro
       - fleet-data:/usr/share/elastic-agent/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     healthcheck:
       test:
         [
