@@ -1,0 +1,100 @@
+{
+  "template": {
+    "settings": {
+      "index": {
+        "lifecycle": {
+          "name": "audit-logs-policy"
+        },
+        "mode": "standard",
+        "codec": "best_compression",
+        "routing": {
+          "allocation": {
+            "include": {
+              "_tier_preference": "data_hot"
+            }
+          }
+        },
+        "refresh_interval": "5s",
+        "number_of_shards": "1",
+        "number_of_replicas": "1"
+      }
+    },
+    "mappings": {
+      "_data_stream_timestamp": {
+        "enabled": true
+      },
+      "dynamic_templates": [],
+      "properties": {
+        "@timestamp": {
+          "type": "date"
+        },
+        "event": {
+          "properties": {
+            "action": {
+              "type": "keyword"
+            },
+            "category": {
+              "type": "keyword"
+            },
+            "outcome": {
+              "type": "keyword"
+            },
+            "type": {
+              "type": "keyword"
+            }
+          }
+        },
+        "http": {
+          "properties": {
+            "request": {
+              "properties": {
+                "method": {
+                  "type": "keyword"
+                }
+              }
+            }
+          }
+        },
+        "resource": {
+          "properties": {
+            "id": {
+              "type": "keyword"
+            },
+            "type": {
+              "type": "keyword"
+            }
+          }
+        },
+        "service": {
+          "properties": {
+            "name": {
+              "type": "keyword"
+            }
+          }
+        },
+        "source": {
+          "properties": {
+            "ip": {
+              "type": "ip"
+            }
+          }
+        },
+        "url": {
+          "properties": {
+            "path": {
+              "type": "keyword"
+            }
+          }
+        },
+        "user": {
+          "properties": {
+            "id": {
+              "type": "keyword"
+            }
+          }
+        }
+      }
+    },
+    "aliases": {}
+  }
+}

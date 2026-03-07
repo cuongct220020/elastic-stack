@@ -9,6 +9,7 @@ from logger import audit_logger
 
 router = APIRouter(prefix="/items", tags=["Items"])
 
+
 @router.post("", response_model=GenericItemResponse, status_code=201)
 async def create_item(item: GenericItemCreate, current_user: str = Depends(get_current_user)):
     item_dict = item.model_dump()
@@ -27,6 +28,7 @@ async def create_item(item: GenericItemCreate, current_user: str = Depends(get_c
     
     return item_dict
 
+
 @router.get("", response_model=List[GenericItemResponse])
 async def list_items(current_user: str = Depends(get_current_user)):
     collection = db_instance.get_collection("items")
@@ -40,6 +42,7 @@ async def list_items(current_user: str = Depends(get_current_user)):
     })
     
     return items
+
 
 @router.get("/{id}", response_model=GenericItemResponse)
 async def get_item(id: str, current_user: str = Depends(get_current_user)):
@@ -59,6 +62,7 @@ async def get_item(id: str, current_user: str = Depends(get_current_user)):
     })
         
     return serialize_mongo_doc(item)
+
 
 @router.put("/{id}", response_model=GenericItemResponse)
 async def update_item(id: str, item_update: GenericItemUpdate, current_user: str = Depends(get_current_user)):
@@ -92,6 +96,7 @@ async def update_item(id: str, item_update: GenericItemUpdate, current_user: str
         return serialize_mongo_doc(existing_item)
 
     raise HTTPException(status_code=404, detail="Item not found")
+
 
 @router.delete("/{id}", status_code=204)
 async def delete_item(id: str, current_user: str = Depends(get_current_user)):

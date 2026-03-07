@@ -6,7 +6,7 @@ def get_audit_logger():
     if not logger.handlers:
         logger.setLevel(logging.INFO)
 
-        # Ghi log ra file định dạng JSON (Filebeat sẽ đọc file này)
+        # Ghi log ra file định dạng JSON
         file_handler = logging.FileHandler('audit_simulation.json')
         file_handler.setFormatter(ecs_logging.StdlibFormatter())
         logger.addHandler(file_handler)
@@ -18,5 +18,5 @@ def get_audit_logger():
         
     return logger
 
-# Tạo instance logger dùng chung cho toàn ứng dụng
+# Create an instance logger to share across the entire app
 audit_logger = get_audit_logger()

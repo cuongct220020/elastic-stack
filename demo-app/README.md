@@ -1,8 +1,10 @@
-Đúng hướng 👍. Vì mục tiêu của bạn chỉ là **thử nghiệm ELK cho audit logs**, nên backend **không nên giống production**. Ta cần **cực kỳ tối giản** để:
+# FastAPI Documentation Management App
 
-* dễ generate logs
-* dễ ingest vào Elasticsearch
-* dễ demo Kibana
+## Introduction
+
+
+
+
 
 Vì vậy ta **loại bỏ nhiều thứ rườm rà** như:
 

@@ -2,8 +2,9 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from config import MONGO_URI, DATABASE_NAME
 
 class Database:
-    client: AsyncIOMotorClient = None
-    db = None
+    def __init__(self, client: AsyncIOMotorClient | None, db: None):
+        self.client = client
+        self.db = db
 
     @classmethod
     def connect(cls):
@@ -20,7 +21,7 @@ class Database:
         return cls.db[name]
 
 # Instance toàn cục để gọi db ở mọi nơi
-db_instance = Database()
+db_instance = Database(None, None)
 
 def serialize_mongo_doc(doc) -> dict:
     """Helper chuyển _id (ObjectId) thành string để trả về dạng JSON"""

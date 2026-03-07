@@ -1,0 +1,72 @@
+{
+  "properties": {
+    "@timestamp": {
+      "type": "date"
+    },
+    "event": {
+      "properties": {
+        "action": {
+          "type": "keyword"
+        },
+        "category": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        },
+        "outcome": {
+          "type": "keyword"
+        }
+      }
+    },
+    "user": {
+      "properties": {
+        "id": {
+          "type": "keyword"
+        }
+      }
+    },
+    "source": {
+      "properties": {
+        "ip": {
+          "type": "ip"
+        }
+      }
+    },
+    "http": {
+      "properties": {
+        "request": {
+          "properties": {
+            "method": {
+              "type": "keyword"
+            }
+          }
+        }
+      }
+    },
+    "url": {
+      "properties": {
+        "path": {
+          "type": "keyword"
+        }
+      }
+    },
+    "resource": {
+      "properties": {
+        "id": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        }
+      }
+    },
+    "service": {
+      "properties": {
+        "name": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}

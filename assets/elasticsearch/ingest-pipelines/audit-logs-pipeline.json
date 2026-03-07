@@ -1,0 +1,21 @@
+{
+  "description": "Pipeline bóc tách Linux Audit logs sang chuẩn ECS",
+  "_meta": {
+    "version": "1.0.1",
+    "managed_by": "gitops-workflow"
+  },
+  "processors": [
+    {
+      "set": {
+        "field": "event.category",
+        "value": "database"
+      }
+    },
+    {
+      "set": {
+        "field": "service.name",
+        "value": "document-api"
+      }
+    }
+  ]
+}

@@ -93,4 +93,13 @@ Planned configuration:
 - Elastic Agent configured with a custom audit log policy (see `assets/audit-logs/`)
 - Ingest pipeline and ILM policy pre-defined in `assets/`
 
-See [OBSERVABILITY_CHECKLIST.md](OBSERVABILITY_CHECKLIST.md) for current status.
+
+Audit logs often basd on 5W / 6W mindset: 
+```
+Who    → user.id
+What   → event.action
+When   → @timestamp
+Where  → source.ip
+Why    → reason (optional)
+How    → event.type / http.method
+```
