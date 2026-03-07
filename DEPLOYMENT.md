@@ -73,6 +73,8 @@ sed -i '' "s/^ELASTIC_AGENT_ENROLLMENT_TOKEN=.*/ELASTIC_AGENT_ENROLLMENT_TOKEN=<
 
 **Option B: via Kibana UI**
 
+![kibana-web-ui.png](docs/images/kibana-web-ui.png)
+
 1. Go to `Fleet` → `Enrollment tokens`
 2. Find the row with `Agent policy = General Agent Policy`
 3. Click the eye icon to reveal the token
