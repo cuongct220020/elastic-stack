@@ -72,7 +72,7 @@ bash setup_elastic_stack.sh --fleet-only  # redeploy Fleet Server + Agent only
 
 ### Manual deployment
 
-For a step-by-step walkthrough with explanations, see [DEPLOYMENT.md](DEPLOYMENT.md).
+For a step-by-step walkthrough with explanations, see [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ### Useful scripts
 
@@ -92,5 +92,3 @@ Planned configuration:
 - Nginx reverse proxy with structured access logs
 - Elastic Agent configured with a custom audit log policy (see `assets/audit-logs/`)
 - Ingest pipeline and ILM policy pre-defined in `assets/`
-
-See [OBSERVABILITY_CHECKLIST.md](OBSERVABILITY_CHECKLIST.md) for current status.

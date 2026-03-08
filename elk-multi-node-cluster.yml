@@ -65,6 +65,18 @@ services:
           "      - localhost\n"\
           "    ip:\n"\
           "      - 127.0.0.1\n"\
+          "  - name: minio\n"\
+          "    dns:\n"\
+          "      - minio\n"\
+          "      - localhost\n"\
+          "    ip:\n"\
+          "      - 127.0.0.1\n"\
+          "  - name: logstash\n"\
+          "    dns:\n"\
+          "      - logstash\n"\
+          "      - localhost\n"\
+          "    ip:\n"\
+          "      - 127.0.0.1\n"\
           > config/certs/instances.yml;
           bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
           unzip config/certs/certs.zip -d config/certs;
@@ -128,6 +140,7 @@ services:
       - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
       # Timezone
       - TZ=Asia/Ho_Chi_Minh
+      - LOG_LEVEL=warn
     ulimits:
       memlock:
         soft: -1
@@ -200,6 +213,7 @@ services:
       - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
       # Timezone
       - TZ=Asia/Ho_Chi_Minh
+      - LOG_LEVEL=warn
     ulimits:
       memlock:
         soft: -1
@@ -272,6 +286,7 @@ services:
       - xpack.security.transport.ssl.certificate_authorities=certs/ca/ca.crt
       # Timezone
       - TZ=Asia/Ho_Chi_Minh
+      - LOG_LEVEL=warn
     ulimits:
       memlock:
         soft: -1
@@ -342,6 +357,7 @@ services:
       - SERVER_SSL_KEY=config/certs/kibana/kibana.key
       # Timezone
       - TZ=Asia/Ho_Chi_Minh
+      - LOG_LEVEL=warn
     volumes:
       - certs:/usr/share/kibana/config/certs
       - kibana-data:/usr/share/kibana/data
@@ -397,16 +413,21 @@ services:
       - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
       - ELASTICSEARCH_SSL_CERTIFICATE_AUTHORITY=/usr/share/logstash/config/certs/ca/ca.crt
       - ELASTICSEARCH_SSL_ENABLED=true
+      
+      # Logstash Inbound TLS (Ready for Beats/Agent SSL)
+      - LOGSTASH_SSL_CERTIFICATE=/usr/share/logstash/config/certs/logstash/logstash.crt
+      - LOGSTASH_SSL_KEY=/usr/share/logstash/config/certs/logstash/logstash.key
+
       # JVM — tune to container memory (512m heap for 1g limit)
       - LS_JAVA_OPTS=-Xms512m -Xmx512m
       # Node
       - NODE_NAME=logstash
       # Pipeline — scale workers to available CPUs
       - PIPELINE_WORKERS=${LOGSTASH_PIPELINE_WORKERS:-2}
-      - PIPELINE_BATCH_SIZE=${LOGSTASH_BATCH_SIZE:-250}
-      - PIPELINE_BATCH_DELAY=50
+      - PIPELINE_BATCH_SIZE=${LOGSTASH_PIPELINE_BATCH_SIZE:-250}
+      - PIPELINE_BATCH_DELAY=${LOGSTASH_PIPELINE_BATCH_DELAY:-50}
       # Misc
-      - LOG_LEVEL=${LOGSTASH_LOG_LEVEL:-warn}
+      - LOG_LEVEL=warn
       - TZ=Asia/Ho_Chi_Minh
       - XPACK_MONITORING_ENABLED=false
     volumes:
@@ -423,13 +444,13 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 90s        # Logstash khởi động chậm hơn các service khác
+      start_period: 120s
     deploy:
       resources:
         limits:
           memory: 1g
         reservations:
-          memory: 768m          # Đảm bảo Logstash luôn có đủ RAM
+          memory: 768m
     logging:
       driver: json-file
       options:

@@ -1,7 +1,1 @@
 http.host: 0.0.0.0
-log.level: ${LOG_LEVEL}
-node.name: ${NODE_NAME}
-pipeline.batch.delay: ${PIPELINE_BATCH_DELAY}
-pipeline.batch.size: ${PIPELINE_BATCH_SIZE}
-pipeline.workers: ${PIPELINE_WORKERS}
-xpack.monitoring.enabled: ${XPACK_MONITORING_ENABLED}

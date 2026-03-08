@@ -1,14 +1,15 @@
 from motor.motor_asyncio import AsyncIOMotorClient
-from config import MONGO_URI, DATABASE_NAME
+from config import mongo_db_config
 
 class Database:
-    client: AsyncIOMotorClient = None
-    db = None
+    def __init__(self, client: AsyncIOMotorClient | None, db: None):
+        self.client = client
+        self.db = db
 
     @classmethod
     def connect(cls):
-        cls.client = AsyncIOMotorClient(MONGO_URI)
-        cls.db = cls.client[DATABASE_NAME]
+        cls.client = AsyncIOMotorClient(mongo_db_config.DB_URI)
+        cls.db = cls.client[mongo_db_config.DB_NAME]
     
     @classmethod
     def close(cls):
@@ -19,8 +20,8 @@ class Database:
     def get_collection(cls, name: str):
         return cls.db[name]
 
-# Instance toàn cục để gọi db ở mọi nơi
-db_instance = Database()
+# Global Instance
+db_instance = Database(None, None)
 
 def serialize_mongo_doc(doc) -> dict:
     """Helper chuyển _id (ObjectId) thành string để trả về dạng JSON"""

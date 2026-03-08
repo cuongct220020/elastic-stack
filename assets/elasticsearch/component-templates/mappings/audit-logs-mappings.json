@@ -1,0 +1,102 @@
+{
+  "properties": {
+    "@timestamp": {
+      "type": "date"
+    },
+    "event": {
+      "properties": {
+        "action": {
+          "type": "keyword"
+        },
+        "category": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        },
+        "outcome": {
+          "type": "keyword"
+        }
+      }
+    },
+    "user": {
+      "properties": {
+        "id": {
+          "type": "keyword"
+        },
+        "target": {
+          "properties": {
+            "id": {
+              "type": "keyword"
+            }
+          }
+        }
+      }
+    },
+    "source": {
+      "properties": {
+        "ip": {
+          "type": "ip"
+        }
+      }
+    },
+    "http": {
+      "properties": {
+        "request": {
+          "properties": {
+            "method": {
+              "type": "keyword"
+            }
+          }
+        }
+      }
+    },
+    "url": {
+      "properties": {
+        "path": {
+          "type": "keyword"
+        }
+      }
+    },
+    "user_agent": {
+      "properties": {
+        "original": {
+          "type": "keyword",
+          "ignore_above": 1024
+        }
+      }
+    },
+    "resource": {
+      "properties": {
+        "id": {
+          "type": "keyword"
+        },
+        "type": {
+          "type": "keyword"
+        },
+        "name": {
+          "type": "text",
+          "fields": {
+            "raw": {
+              "type": "keyword"
+            }
+          }
+        }
+      }
+    },
+    "labels": {
+      "properties": {
+        "is_deleted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "service": {
+      "properties": {
+        "name": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}

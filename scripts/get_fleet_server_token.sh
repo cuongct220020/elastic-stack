@@ -54,9 +54,8 @@ if echo "$RESPONSE" | grep -q "version_conflict"; then
     "$BASE_URL")
 fi
 
-# Parse token value inside es-01 container — no host python3 needed
-TOKEN_VALUE=$(echo "$RESPONSE" | docker exec -i es-01 \
-  python3 -c "import json,sys; d=json.load(sys.stdin); print(d['token']['value'])" 2>/dev/null || echo "")
+# Parse token value directly using sed/grep
+TOKEN_VALUE=$(echo "$RESPONSE" | grep -o '"value":"[^"]*"' | cut -d'"' -f4)
 
 [ -n "$TOKEN_VALUE" ] || { echo "ERROR: Failed to parse token. Response: $RESPONSE" >&2; exit 1; }
 

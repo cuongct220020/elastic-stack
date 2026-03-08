@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # 1. Quản lý thư viện Python trong demo-app
+  # 1. Python Libraries Management in demo-app
   - package-ecosystem: "pip"
     directory: "/demo-app"
     schedule:
@@ -11,9 +11,9 @@ updates:
     commit-message:
       prefix: "chore(deps)"
 
-  # 2. Quản lý Docker images trong các Dockerfile và Docker Compose
+  # 2. Docker images management in Dockerfile and Docker Compose
   - package-ecosystem: "docker"
-    directory: "/" # Quét thư mục gốc để tìm các file docker-compose.yml
+    directory: "/"
     schedule:
       interval: "weekly"
     labels:
@@ -22,7 +22,7 @@ updates:
     commit-message:
       prefix: "chore(docker)"
 
-  # Thêm các cấu hình quét Dockerfile ở các thư mục con
+  # Add configuration for scanning Dockerfile at child directory
   - package-ecosystem: "docker"
     directory: "/demo-app"
     schedule:
@@ -44,7 +44,12 @@ updates:
       interval: "weekly"
 
   - package-ecosystem: "docker"
-    directory: "/fleet"
+    directory: "/beats/fleet"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "docker"
+    directory: "/beats/agent"
     schedule:
       interval: "weekly"
 
@@ -53,7 +58,7 @@ updates:
     schedule:
       interval: "weekly"
 
-  # 3. Quản lý GitHub Actions workflows
+  # 3. GitHub Actions workflows management
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

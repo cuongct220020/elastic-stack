@@ -1,6 +1,6 @@
 # Elastic Stack - Manual Deployment Guide
 
-![fleet-server.png](docs/images/fleet-server.png)
+![fleet-server.png](images/fleet-server.png)
 
 
 ## Prerequisites
@@ -73,7 +73,7 @@ sed -i '' "s/^ELASTIC_AGENT_ENROLLMENT_TOKEN=.*/ELASTIC_AGENT_ENROLLMENT_TOKEN=<
 
 **Option B: via Kibana UI**
 
-![kibana-web-ui.png](docs/images/kibana-web-ui.png)
+![kibana-web-ui.png](images/kibana-web-ui.png)
 
 1. Go to `Fleet` → `Enrollment tokens`
 2. Find the row with `Agent policy = General Agent Policy`
