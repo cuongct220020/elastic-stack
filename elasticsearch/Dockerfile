@@ -4,4 +4,5 @@ ARG ELASTIC_VERSION
 FROM docker.elastic.co/elasticsearch/elasticsearch-wolfi:${ELASTIC_VERSION:-9.3.1}
 
 # Add your elasticsearch plugins setup here
-# Example: RUN elasticsearch-plugin install <name|url>
+# Plugin for S3/MinIO snapshots support
+RUN bin/elasticsearch-plugin install --batch repository-s3
