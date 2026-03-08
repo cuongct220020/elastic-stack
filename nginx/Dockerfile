@@ -1,4 +1,4 @@
-FROM nginx:1.25
+FROM nginx:1.29
 
 # Cài đặt openssl để sinh chứng chỉ tự ký
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
