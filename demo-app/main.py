@@ -3,7 +3,7 @@ from fastapi import FastAPI
 
 from database import db_instance
 from logger import audit_logger
-from routers import items
+from document_apis import router as document_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan, title="Demo Audit CRUD App")
 
 # Register Route
-app.include_router(items.router)
+app.include_router(document_router)
 
 @app.get("/health", tags=["System"])
 async def health_check():

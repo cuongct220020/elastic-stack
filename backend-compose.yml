@@ -15,10 +15,22 @@ services:
       - backend-net
       - elastic-net
     environment:
-      - MONGO_URI=mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASSWORD:-example}@mongodb:27017/
+      - MONGO_DB_PORT=${MONGO_DB_PORT:-27017}
+      - MONGO_DB_HOST=${MONGO_DB_HOST:-mongodb}
+      - MONGO_DB_USERNAME=${MONGO_DB_USERNAME:-root}
+      - MONGO_DB_PASSWORD=${MONGO_DB_PASSWORD:-example}
+      - MONGO_DB_URI=mongodb://${MONGO_DB_USERNAME}:${MONGO_DB_PASSWORD}@${MONGO_DB_HOST}:${MONGO_DB_PORT}/
+      - MONGO_DB_NAME=${MONGO_DB_NAME:-demo}
+      - TZ=Asia/Ho_Chi_Minh
     volumes:
       - ./demo-app:/app
       - app-logs:/var/log/demo-app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:1337/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     logging:
       driver: "json-file"
       options:
@@ -27,13 +39,13 @@ services:
 
   # MONGO DB
   mongodb:
-    image: mongo:${MONGO_VERSION:-7.0}
+    image: mongo:${MONGO_DB_VERSION:-7.0}
     hostname: mongodb
     container_name: mongodb
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-root}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-example}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_DB_USERNAME:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_DB_PASSWORD:-example}
     volumes:
       - mongodb-data:/data/db
     networks:
@@ -65,16 +77,25 @@ services:
     hostname: nginx
     container_name: nginx
     restart: unless-stopped
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
     ports:
       - "${NGINX_HTTP_PORT:-80}:80"
       - "${NGINX_HTTPS_PORT:-443}:443"
     depends_on:
-      - demo-app
+      demo-app:
+        condition: service_healthy
     networks:
       - backend-net
       - elastic-net
     volumes:
       - ./nginx/config/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     deploy:
       resources:
         limits:

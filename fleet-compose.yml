@@ -86,7 +86,7 @@ services:
       - ELASTIC_AGENT_LOG_LEVEL=error
     volumes:
       - certs:/usr/share/elastic-agent/config/certs:ro
-      - app-logs:/var/log/demo-app:ro
+      - app-logs:/usr/share/app-logs:ro
       # Mount host paths for system/log collection (adjust as needed)
       - /var/log:/var/log:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

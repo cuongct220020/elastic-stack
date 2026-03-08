@@ -1,6 +1,35 @@
-# Ignore Docker build files
+# ===== Git =====
+.git/
+.gitignore
+
+# ===== Docker =====
 Dockerfile
 .dockerignore
+docker-compose*.yml
 
-# Ignore OS artifacts
-**/.DS_Store
+# ===== Python & Environments =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+.venv/
+env/
+
+# ===== Secrets & Configs =====
+.env
+.env.*
+!*.example
+
+# ===== OS & IDEs =====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# ===== App Data & Logs =====
+# Prevent copying local logs into the container
+/logs/
+*.log
+*.json
