@@ -1,4 +1,7 @@
 {
+  "index_patterns": ["logs-audit-*"],
+  "data_stream": { },
+  "priority": 500,
   "template": {
     "settings": {
       "index": {
