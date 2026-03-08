@@ -1,20 +1,22 @@
 {
-  "description": "Pipeline bóc tách Linux Audit logs sang chuẩn ECS",
+  "description": "Audit Logs Pipeline - Advanced Parsing",
   "_meta": {
-    "version": "1.0.1",
+    "version": "1.1.0",
     "managed_by": "gitops-workflow"
   },
   "processors": [
     {
-      "set": {
-        "field": "event.category",
-        "value": "database"
+      "user_agent": {
+        "field": "user_agent.original",
+        "target_field": "user_agent",
+        "ignore_missing": true
       }
     },
     {
-      "set": {
-        "field": "service.name",
-        "value": "document-api"
+      "remove": {
+        "field": ["agent", "log.file.path"],
+        "ignore_missing": true,
+        "ignore_failure": true
       }
     }
   ]
