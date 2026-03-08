@@ -1,5 +1,13 @@
 from typing import Optional
 from pydantic import BaseModel, Field
+from datetime import datetime
+
+
+class DocumentSchema(BaseModel):
+    doc_id: str
+    title: str
+    content: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class GenericItemCreate(BaseModel):

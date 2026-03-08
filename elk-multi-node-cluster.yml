@@ -413,6 +413,11 @@ services:
       - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
       - ELASTICSEARCH_SSL_CERTIFICATE_AUTHORITY=/usr/share/logstash/config/certs/ca/ca.crt
       - ELASTICSEARCH_SSL_ENABLED=true
+      
+      # Logstash Inbound TLS (Ready for Beats/Agent SSL)
+      - LOGSTASH_SSL_CERTIFICATE=/usr/share/logstash/config/certs/logstash/logstash.crt
+      - LOGSTASH_SSL_KEY=/usr/share/logstash/config/certs/logstash/logstash.key
+
       # JVM — tune to container memory (512m heap for 1g limit)
       - LS_JAVA_OPTS=-Xms512m -Xmx512m
       # Node

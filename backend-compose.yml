@@ -5,19 +5,20 @@ services:
     build:
       context: ./demo-app
       dockerfile: Dockerfile
-    hostname: demo-app
-    container_name: demo-app
+    image: demo-app:${APP_VERSION:-latest}
+    # Remove container_name to allow scaling with --scale demo-app=3
     restart: unless-stopped
     depends_on:
       mongodb:
         condition: service_healthy
     networks:
       - backend-net
+      - elastic-net
     environment:
       - MONGO_URI=mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASSWORD:-example}@mongodb:27017/
     volumes:
       - ./demo-app:/app
-      - app-logs-vol:/var/log/demo-app
+      - app-logs:/var/log/demo-app
     logging:
       driver: "json-file"
       options:
@@ -26,7 +27,7 @@ services:
 
   # MONGO DB
   mongodb:
-    image: mongo:6-jammy
+    image: mongo:${MONGO_VERSION:-7.0}
     hostname: mongodb
     container_name: mongodb
     restart: unless-stopped
@@ -37,21 +38,22 @@ services:
       - mongodb-data:/data/db
     networks:
       - backend-net
+      - elastic-net
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 20s
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-    deploy:
-      resources:
-        limits:
-          memory: 1g
 
 
   # NGINX REVERSE PROXY
@@ -59,37 +61,42 @@ services:
     build:
       context: ./nginx
       dockerfile: Dockerfile
+    image: nginx-custom:${NGINX_VERSION:-1.25}
+    hostname: nginx
     container_name: nginx
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
     depends_on:
       - demo-app
     networks:
       - backend-net
+      - elastic-net
     volumes:
       - ./nginx/config/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-    deploy:
-      resources:
-        limits:
-          memory: 512m
 
 
 networks:
   backend-net:
     name: backend-net
     driver: bridge
-
+  elastic-net:
+    name: elastic-net
+    external: true
 
 volumes:
-  app-logs-vol:
-    name: app-logs-vol
+  app-logs:
+    name: app-logs
     external: true
   mongodb-data:
     name: mongodb-data

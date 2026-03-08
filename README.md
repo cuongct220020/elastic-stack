@@ -106,7 +106,5 @@ How    → event.type / http.method
 
 Todolist: 
 - Định nghĩa lại schema, index template, component template cho bài toán audit logs.
-- Định nghĩa là schema cho document của MonngoDB.
-- Tìm hiểu thêm về MongoDB, Nginx (đặc biệt là Nginx)
 - Triển khai FastAPI application. 
 - Phân tích Logs trên Kibana. 
