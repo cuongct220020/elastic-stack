@@ -17,27 +17,22 @@ if [ -z "$ELASTIC_PASSWORD" ]; then
   exit 1
 fi
 
-# Get CA path from running es-01 container
-CA_PATH=$(docker inspect es-01 \
-  --format='{{range .Mounts}}{{if eq .Destination "/usr/share/elasticsearch/config/certs"}}{{.Source}}{{end}}{{end}}')/ca/ca.crt
-
-if [ ! -f "$CA_PATH" ]; then
-  echo "ERROR: CA cert not found at $CA_PATH" >&2
-  exit 1
-fi
-
 BASE_URL="https://localhost:9200/_security/service/elastic/fleet-server/credential/token/$TOKEN_NAME"
-AUTH="-u elastic:${ELASTIC_PASSWORD} --cacert $CA_PATH"
 
 echo "Deleting existing token '$TOKEN_NAME'..."
-curl -sk $AUTH -X DELETE "$BASE_URL" -o /dev/null
+docker exec es-01 curl -sk -X DELETE \
+  --cacert config/certs/ca/ca.crt \
+  -u "elastic:${ELASTIC_PASSWORD}" \
+  "$BASE_URL" -o /dev/null
 
 echo "Creating new token '$TOKEN_NAME'..."
-RESPONSE=$(curl -sk $AUTH -X POST "$BASE_URL")
+RESPONSE=$(docker exec es-01 curl -sk -X POST \
+  --cacert config/certs/ca/ca.crt \
+  -u "elastic:${ELASTIC_PASSWORD}" \
+  "$BASE_URL")
 
-# Parse value without python3 on host - use es-01 container
-TOKEN_VALUE=$(echo "$RESPONSE" | docker exec -i es-01 \
-  python3 -c "import json,sys; d=json.load(sys.stdin); print(d['token']['value'])" 2>/dev/null)
+# Parse token value directly using sed/grep (no python3 needed)
+TOKEN_VALUE=$(echo "$RESPONSE" | grep -o '"value":"[^"]*"' | cut -d'"' -f4)
 
 if [ -z "$TOKEN_VALUE" ]; then
   echo "ERROR: Failed to parse token value. Raw response:" >&2
