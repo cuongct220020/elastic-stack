@@ -161,24 +161,23 @@ fi
 # ==============================================================================
 log_step "Phase 2: Fleet Server service token"
 
-CA_PATH=$(docker inspect es-01 \
-  --format='{{range .Mounts}}{{if eq .Destination "/usr/share/elasticsearch/config/certs"}}{{.Source}}{{end}}{{end}}')/ca/ca.crt
-
-[ -f "$CA_PATH" ] || log_error "CA cert not found at $CA_PATH"
-
 BASE_URL="https://localhost:9200/_security/service/elastic/fleet-server/credential/token/$FLEET_TOKEN_NAME"
-AUTH="-u elastic:${ELASTIC_PASSWORD} --cacert $CA_PATH"
 
 # Delete existing token (ignore errors — may not exist)
 log_info "Deleting existing token '$FLEET_TOKEN_NAME' (if any)..."
-curl -sk $AUTH -X DELETE "$BASE_URL" -o /dev/null || true
+docker exec es-01 curl -sk -X DELETE \
+  --cacert config/certs/ca/ca.crt \
+  -u "elastic:${ELASTIC_PASSWORD}" \
+  "$BASE_URL" -o /dev/null || true
 
 log_info "Creating new API-based token '$FLEET_TOKEN_NAME'..."
-TOKEN_RESPONSE=$(curl -sk $AUTH -X POST "$BASE_URL")
+TOKEN_RESPONSE=$(docker exec es-01 curl -sk -X POST \
+  --cacert config/certs/ca/ca.crt \
+  -u "elastic:${ELASTIC_PASSWORD}" \
+  "$BASE_URL")
 
-# Parse inside es-01 container — no host python3 required
-FLEET_TOKEN=$(echo "$TOKEN_RESPONSE" | docker exec -i es-01 \
-  python3 -c "import json,sys; d=json.load(sys.stdin); print(d['token']['value'])" 2>/dev/null || echo "")
+# Parse inside using portable bash tools (grep/cut)
+FLEET_TOKEN=$(echo "$TOKEN_RESPONSE" | grep -o '"value":"[^"]*"' | cut -d'"' -f4)
 
 [ -n "$FLEET_TOKEN" ] || log_error "Failed to create service token. Response: $TOKEN_RESPONSE"
 
@@ -194,18 +193,11 @@ log_info "Fetching enrollment token for policy: $AGENT_POLICY_ID"
 
 ENROLL_RESPONSE=$(docker exec kibana curl -sk \
   -u "elastic:${ELASTIC_PASSWORD}" \
-  "https://kibana:5601/api/fleet/enrollment_api_keys" \
+  "https://localhost:5601/api/fleet/enrollment_api_keys" \
   -H "kbn-xsrf: true")
 
-ENROLL_TOKEN=$(echo "$ENROLL_RESPONSE" | docker exec -i kibana \
-  python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for item in data.get('items', []):
-    if item.get('policy_id') == '${AGENT_POLICY_ID}' and item.get('active'):
-        print(item['api_key'])
-        break
-" 2>/dev/null || echo "")
+# Parse JSON using awk to find the active api_key for the specific policy_id
+ENROLL_TOKEN=$(echo "$ENROLL_RESPONSE" | sed 's/},/\n/g' | grep '"active":true' | grep "\"policy_id\":\"${AGENT_POLICY_ID}\"" | grep -o '"api_key":"[^"]*"' | cut -d'"' -f4 | head -n 1)
 
 [ -n "$ENROLL_TOKEN" ] || log_error "No active enrollment token found for policy '$AGENT_POLICY_ID'. Is Kibana Fleet configured?"
 
