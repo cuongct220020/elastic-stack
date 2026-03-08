@@ -3,7 +3,7 @@
     "settings": {
       "index": {
         "lifecycle": {
-          "name": "audit-logs-policy"
+          "name": "audit-logs-policy",
         },
         "mode": "standard",
         "codec": "best_compression",
@@ -62,6 +62,21 @@
             },
             "type": {
               "type": "keyword"
+            },
+            "name": {
+              "type": "text",
+              "fields": {
+                "raw": {
+                  "type": "keyword"
+                }
+              }
+            }
+          }
+        },
+        "labels": {
+          "properties": {
+            "is_deleted": {
+              "type": "boolean"
             }
           }
         },
@@ -86,10 +101,25 @@
             }
           }
         },
+        "user_agent": {
+          "properties": {
+            "original": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        },
         "user": {
           "properties": {
             "id": {
               "type": "keyword"
+            },
+            "target": {
+              "properties": {
+                "id": {
+                  "type": "keyword"
+                }
+              }
             }
           }
         }

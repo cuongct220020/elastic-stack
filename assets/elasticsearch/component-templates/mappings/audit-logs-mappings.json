@@ -23,6 +23,13 @@
       "properties": {
         "id": {
           "type": "keyword"
+        },
+        "target": {
+          "properties": {
+            "id": {
+              "type": "keyword"
+            }
+          }
         }
       }
     },
@@ -51,6 +58,14 @@
         }
       }
     },
+    "user_agent": {
+      "properties": {
+        "original": {
+          "type": "keyword",
+          "ignore_above": 1024
+        }
+      }
+    },
     "resource": {
       "properties": {
         "id": {
@@ -58,6 +73,21 @@
         },
         "type": {
           "type": "keyword"
+        },
+        "name": {
+          "type": "text",
+          "fields": {
+            "raw": {
+              "type": "keyword"
+            }
+          }
+        }
+      }
+    },
+    "labels": {
+      "properties": {
+        "is_deleted": {
+          "type": "boolean"
         }
       }
     },
