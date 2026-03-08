@@ -42,13 +42,22 @@ do
     # 2. Select a random document from our list
     DOC_COUNT=${#DOC_IDS[@]}
     if [ $DOC_COUNT -eq 0 ]; then
-        echo "Error: No documents available to interact with. Check API connection."
-        exit 1
+        echo "All seed documents have been deleted! Restart the script to seed again."
+        exit 0
     fi
-    RANDOM_DOC_ID=${DOC_IDS[$((RANDOM % DOC_COUNT))]}
+    
+    # Pick a random index
+    RANDOM_INDEX=$((RANDOM % DOC_COUNT))
+    RANDOM_DOC_ID=${DOC_IDS[$RANDOM_INDEX]}
     
     # 3. Select a random action (1-4)
-    ACTION=$((RANDOM % 4 + 1))
+    # Weighting: 40% Read, 30% List, 20% Update, 10% Delete
+    RAND_VAL=$((RANDOM % 100))
+    if [ $RAND_VAL -lt 40 ]; then ACTION=2; # Read
+    elif [ $RAND_VAL -lt 70 ]; then ACTION=1; # List
+    elif [ $RAND_VAL -lt 90 ]; then ACTION=3; # Update
+    else ACTION=4; # Delete
+    fi
     
     case $ACTION in
         1)
@@ -67,10 +76,18 @@ do
             ;;
         4)
             echo "Action: User $ACTOR_ID is DELETING document $RANDOM_DOC_ID."
-            curl -sk -X DELETE "$API_URL/$RANDOM_DOC_ID?user_id=$ACTOR_ID" > /dev/null
+            HTTP_STATUS=$(curl -sk -o /dev/null -w "%{http_code}" -X DELETE "$API_URL/$RANDOM_DOC_ID?user_id=$ACTOR_ID")
+            
+            # If deletion was successful (204 No Content), remove it from our active array
+            if [ "$HTTP_STATUS" -eq 204 ]; then
+                echo "  -> Document $RANDOM_DOC_ID successfully soft-deleted. Removing from active target list."
+                unset 'DOC_IDS[RANDOM_INDEX]'
+                # Rebuild array to fix sparse indices
+                DOC_IDS=("${DOC_IDS[@]}")
+            fi
             ;;
     esac
 
-    # Wait a bit between requests
-    sleep 0.5
+    # Wait a bit between requests to keep the logs readable but continuous
+    sleep 0.8
 done
