@@ -11,8 +11,8 @@ def get_audit_logger():
     if not logger.handlers:
         logger.setLevel(logging.INFO)
 
-        # Ensure log directory exists
-        log_dir = '/var/log/demo-app'
+        log_dir = os.getenv("APP_LOG_DIR", '/var/log/demo-app')
+        
         if not os.path.exists(log_dir):
             try:
                 os.makedirs(log_dir, exist_ok=True)
@@ -23,7 +23,7 @@ def get_audit_logger():
         # Generate a unique log file per container instance based on hostname
         # This prevents write-conflicts when scaling demo-app=3
         hostname = socket.gethostname()
-        log_path = os.path.join(log_dir, f'audit_{hostname}.json')
+        log_path = os.path.join(log_dir, f'logs_audit_{hostname}.json')
 
         # Write to JSON file formatted by ecs_logging
         file_handler = logging.FileHandler(log_path)

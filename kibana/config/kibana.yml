@@ -46,8 +46,6 @@ xpack.fleet.packages:
     version: latest
   - name: apm
     version: latest
-  - name: log
-    version: latest
 
 xpack.fleet.agentPolicies:
   - name: Fleet Server Policy
@@ -111,26 +109,6 @@ xpack.fleet.agentPolicies:
       - name: docker-1
         package:
           name: docker
-      - name: demo-app-audit-logs
-        package:
-          name: log
-        inputs:
-          - type: logfile
-            enabled: true
-            streams:
-              - data_stream:
-                  dataset: audit
-                vars:
-                  - name: paths
-                    value:
-                      - /usr/share/app-logs/*.json
-                  - name: custom
-                    value: |
-                      processors:
-                        - decode_json_fields:
-                            fields: ["message"]
-                            target: ""
-                            overwrite_keys: true
 
 
 xpack.fleet.agentless.enabled: false

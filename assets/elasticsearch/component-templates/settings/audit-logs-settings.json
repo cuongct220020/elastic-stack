@@ -1,8 +1,12 @@
 {
-  "number_of_shards": 1,
-  "number_of_replicas": 1,
-  "refresh_interval": "5s",
-  "codec": "best_compression",
-  "index.lifecycle.name": "audit-logs-policy",
-  "index.default_pipeline": "audit-logs-pipeline"
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1,
+      "refresh_interval": "5s",
+      "codec": "best_compression",
+      "index.lifecycle.name": "audit-logs-policy",
+      "index.default_pipeline": "audit-logs-pipeline"
+    }
+  }
 }

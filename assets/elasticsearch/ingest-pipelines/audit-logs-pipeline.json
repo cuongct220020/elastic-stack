@@ -14,7 +14,7 @@
     },
     {
       "remove": {
-        "field": ["agent", "log.file.path"],
+        "field": ["agent", "log.file.path", "message"],
         "ignore_missing": true,
         "ignore_failure": true
       }

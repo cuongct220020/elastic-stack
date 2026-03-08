@@ -49,20 +49,25 @@ deploy_json() {
     fi
 }
 
-# 1. Deploy ILM Policies (Lifecycle)
+# 1. Deploy Ingest Pipelines
 echo ""
-echo "--- 1. Deploying ILM Policies ---"
+echo "--- 1. Deploying Ingest Pipelines ---"
+deploy_json "_ingest/pipeline/audit-logs-pipeline" "$ASSETS_DIR/ingest-pipelines/audit-logs-pipeline.json" "audit-logs-pipeline"
+
+# 2. Deploy ILM Policies (Lifecycle)
+echo ""
+echo "--- 2. Deploying ILM Policies ---"
 deploy_json "_ilm/policy/audit-logs-policy" "$ASSETS_DIR/ilm-policies/audit-logs-policy.json" "audit-logs-policy"
 
-# 2. Deploy Component Templates (Settings & Mappings)
+# 3. Deploy Component Templates (Settings & Mappings)
 echo ""
-echo "--- 2. Deploying Component Templates ---"
+echo "--- 3. Deploying Component Templates ---"
 deploy_json "_component_template/audit-logs-settings" "$ASSETS_DIR/component-templates/settings/audit-logs-settings.json" "audit-logs-settings"
 deploy_json "_component_template/audit-logs-mappings" "$ASSETS_DIR/component-templates/mappings/audit-logs-mappings.json" "audit-logs-mappings"
 
-# 3. Deploy Index Templates (The glue that binds it all)
+# 4. Deploy Index Templates (The glue that binds it all)
 echo ""
-echo "--- 3. Deploying Index Templates ---"
+echo "--- 4. Deploying Index Templates ---"
 deploy_json "_index_template/audit-logs-template" "$ASSETS_DIR/index-templates/audit-logs-template.json" "audit-logs-template"
 
 echo "=========================================================="

@@ -94,3 +94,16 @@ Sau khi ingest logs, bạn có thể show:
 ```
 docker volume create app-logs
 ```
+
+
+```
+ndjson:
+  target: ""
+  add_error_key: true
+  message_key: message
+
+decode_json_fields:
+    fields: ["message"]
+    target: ""
+    overwrite_keys: true
+```

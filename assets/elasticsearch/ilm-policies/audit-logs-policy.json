@@ -30,27 +30,13 @@
         "actions": {
           "set_priority": {
             "priority": 0
-          },
-          "searchable_snapshot": {
-            "snapshot_repository": "minio-snapshots",
-            "force_merge_index": true
-          }
-        }
-      },
-      "frozen": {
-        "min_age": "180d",
-        "actions": {
-          "searchable_snapshot": {
-            "snapshot_repository": "minio-snapshots"
           }
         }
       },
       "delete": {
-        "min_age": "1825d",
+        "min_age": "365d",
         "actions": {
-          "delete": {
-            "delete_searchable_snapshot": true
-          }
+          "delete": {}
         }
       }
     }
