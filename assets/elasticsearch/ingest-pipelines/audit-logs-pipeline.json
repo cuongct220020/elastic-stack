@@ -1,10 +1,17 @@
 {
-  "description": "Audit Logs Pipeline - Advanced Parsing",
+  "description": "Audit Logs Pipeline - Parse JSON and User Agent",
   "_meta": {
-    "version": "1.1.0",
+    "version": "1.2.0",
     "managed_by": "gitops-workflow"
   },
   "processors": [
+    {
+      "json": {
+        "field": "message",
+        "add_to_root": true,
+        "ignore_failure": true
+      }
+    },
     {
       "user_agent": {
         "field": "user_agent.original",
@@ -14,7 +21,7 @@
     },
     {
       "remove": {
-        "field": ["agent", "log.file.path", "message"],
+        "field": ["message", "agent", "log.file.path"],
         "ignore_missing": true,
         "ignore_failure": true
       }
