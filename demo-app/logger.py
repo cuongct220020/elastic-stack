@@ -19,7 +19,7 @@ def get_audit_logger():
             except Exception:
                 # Fallback to current directory for local dev outside docker
                 log_dir = '.'
-        
+
         # Generate a unique log file per container instance based on hostname
         # This prevents write-conflicts when scaling demo-app=3
         hostname = socket.gethostname()
@@ -30,10 +30,10 @@ def get_audit_logger():
         file_handler.setFormatter(ecs_logging.StdlibFormatter())
         logger.addHandler(file_handler)
 
-        # Write to console for easy debugging via `docker compose logs`
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(ecs_logging.StdlibFormatter())
-        logger.addHandler(console_handler)
+        # # Write to console for easy debugging via `docker compose logs`
+        # console_handler = logging.StreamHandler()
+        # console_handler.setFormatter(ecs_logging.StdlibFormatter())
+        # logger.addHandler(console_handler)
         
     return logger
 
