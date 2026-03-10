@@ -136,3 +136,7 @@ docker volume create app-logs
 
 - For setup instructions (start backend, apply templates, configure Kibana integration): [docs/AUDIT_LOGS_SETUP.md](../docs/AUDIT_LOGS_SETUP.md)
 - For Elasticsearch index design, ILM policy, and ingest pipeline rationale: [assets/README.md](../assets/README.md)
+
+## Demo Audit Logs Dashboard
+
+![audit-logs-dashboard.png](../docs/images/audit-logs-dashboard.png)
