@@ -85,6 +85,27 @@ services:
         chown -R root:root config/certs;
         find . -type d -exec chmod 750 \{\} \;;
         find . -type f -exec chmod 640 \{\} \;;
+    
+        if ! /usr/share/elasticsearch/jdk/bin/keytool -list \
+            -alias elastic-minio-ca \
+            -keystore config/certs/elastic-jvm-truststore.jks \
+            -storepass changeit -noprompt 2>/dev/null; then
+          echo "Building custom JVM truststore with Elastic CA...";
+          cp /usr/share/elasticsearch/jdk/lib/security/cacerts /tmp/truststore-tmp.jks;
+          /usr/share/elasticsearch/jdk/bin/keytool -importcert \
+            -trustcacerts \
+            -keystore /tmp/truststore-tmp.jks \
+            -storepass changeit \
+            -noprompt \
+            -alias elastic-minio-ca \
+            -file config/certs/ca/ca.crt;
+          chmod 644 /tmp/truststore-tmp.jks;
+          mv /tmp/truststore-tmp.jks config/certs/elastic-jvm-truststore.jks;
+          echo "Truststore ready.";
+        else
+          echo "Truststore already contains Elastic CA, skipping.";
+        fi;
+    
         echo "Waiting for Elasticsearch availability";
         until curl -s --cacert config/certs/ca/ca.crt https://es-01:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
         echo "Setting kibana_system password";
@@ -92,10 +113,11 @@ services:
         echo "All done!";
       '
     healthcheck:
-      test: ["CMD-SHELL", "[ -f config/certs/es-01/es-01.crt ]"]
+      test: ["CMD-SHELL", "[ -f config/certs/es-01/es-01.crt ] && [ -f config/certs/elastic-jvm-truststore.jks ]"]
       interval: 1s
       timeout: 5s
       retries: 120
+
 
   # ELASTICSEARCH — NODE 01 (master-eligible, exposes port)
   es-01:
@@ -120,7 +142,7 @@ services:
       - discovery.seed_hosts=es-02,es-03
       - node.name=es-01
       # JVM / memory
-      - ES_JAVA_OPTS=-Xms${ES_HEAP_SIZE:-1g} -Xmx${ES_HEAP_SIZE:-1g}
+      - ES_JAVA_OPTS=-Xms${ES_HEAP_SIZE:-1g} -Xmx${ES_HEAP_SIZE:-1g} -Djavax.net.ssl.trustStore=/usr/share/elasticsearch/config/certs/elastic-jvm-truststore.jks -Djavax.net.ssl.trustStorePassword=changeit
       - bootstrap.memory_lock=true
       - xpack.ml.use_auto_machine_memory_percent=true
       # Security
@@ -193,7 +215,7 @@ services:
       - discovery.seed_hosts=es-01,es-03
       - node.name=es-02
       # JVM / memory
-      - ES_JAVA_OPTS=-Xms${ES_HEAP_SIZE:-1g} -Xmx${ES_HEAP_SIZE:-1g}
+      - ES_JAVA_OPTS=-Xms${ES_HEAP_SIZE:-1g} -Xmx${ES_HEAP_SIZE:-1g} -Djavax.net.ssl.trustStore=/usr/share/elasticsearch/config/certs/elastic-jvm-truststore.jks -Djavax.net.ssl.trustStorePassword=changeit
       - bootstrap.memory_lock=true
       - xpack.ml.use_auto_machine_memory_percent=true
       # Security
@@ -266,7 +288,7 @@ services:
       - discovery.seed_hosts=es-01,es-02
       - node.name=es-03
       # JVM / memory
-      - ES_JAVA_OPTS=-Xms${ES_HEAP_SIZE:-1g} -Xmx${ES_HEAP_SIZE:-1g}
+      - ES_JAVA_OPTS=-Xms${ES_HEAP_SIZE:-1g} -Xmx${ES_HEAP_SIZE:-1g} -Djavax.net.ssl.trustStore=/usr/share/elasticsearch/config/certs/elastic-jvm-truststore.jks -Djavax.net.ssl.trustStorePassword=changeit
       - bootstrap.memory_lock=true
       - xpack.ml.use_auto_machine_memory_percent=true
       # Security

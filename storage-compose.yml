@@ -39,7 +39,7 @@ services:
       - elastic-net
     healthcheck:
       # Use https and ignore cert validation for healthcheck
-      test: ["CMD", "curl", "-f", "-k", "https://localhost:9000/minio/health/live"]
+      test: ["CMD-SHELL", "/bin/sh -c 'mc alias set myminio https://localhost:9000 $${MINIO_ROOT_USER:-admin} $${MINIO_ROOT_PASSWORD:-cuongct123123} --insecure && mc ready myminio --insecure || exit 1'"]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -55,7 +55,6 @@ services:
     image: quay.io/minio/minio:${MINIO_VERSION:-RELEASE.2024-03-05T04-48-44Z}
     hostname: minio-mc
     container_name: minio-mc
-    profiles: ["minio-mc"]
     depends_on:
       minio:
         condition: service_healthy
