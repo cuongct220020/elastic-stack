@@ -22,15 +22,13 @@ if [ ! -f "$DASHBOARD_FILE" ]; then
   exit 1
 fi
 
-echo "Copying dashboard file into Kibana container..."
-docker cp "$DASHBOARD_FILE" kibana:/tmp/dashboard.ndjson
+echo "Executing import via Kibana API (Streaming mode)..."
+PAYLOAD=$(cat "$DASHBOARD_FILE")
 
-echo "Executing import via Kibana API..."
-RESPONSE=$(docker exec kibana bash -c '
+RESPONSE=$(echo "$PAYLOAD" | docker exec -i kibana bash -c '
   PROTO="http"
   AUTH=""
   
-  # Check if Kibana is using HTTPS (Multi-node / Prod setup) or HTTP (Single node / Dev)
   if curl -sk "https://localhost:5601/api/status" > /dev/null 2>&1; then
       PROTO="https"
       AUTH="-u elastic:'"${ELASTIC_PASSWORD}"'"
@@ -39,11 +37,8 @@ RESPONSE=$(docker exec kibana bash -c '
   curl -sk -X POST "${PROTO}://localhost:5601/api/saved_objects/_import?overwrite=true" \
       ${AUTH} \
       -H "kbn-xsrf: true" \
-      --form file=@/tmp/dashboard.ndjson
+      --form "file=@-;filename=dashboard.ndjson"
 ')
-
-# Clean up
-docker exec kibana rm -f /tmp/dashboard.ndjson
 
 if echo "$RESPONSE" | grep -q '"success":true'; then
     echo "SUCCESS: Dashboard imported successfully!"

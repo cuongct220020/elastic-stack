@@ -96,7 +96,7 @@ docker compose version >/dev/null 2>&1 || log_error "Docker Compose plugin is no
 [ -f "$ENV_FILE" ] || log_error ".env file not found. Create it from .env.example first."
 
 ELASTIC_PASSWORD=$(grep ^ELASTIC_PASSWORD "$ENV_FILE" | cut -d= -f2)
-[n "$ELASTIC_PASSWORD" ] || log_error "ELASTIC_PASSWORD is not set in .env"
+[ -n "$ELASTIC_PASSWORD" ] || log_error "ELASTIC_PASSWORD is not set in .env"
 
 log_info "Ensuring external volumes exist..."
 docker volume create app-logs >/dev/null 2>&1 || true
@@ -205,15 +205,25 @@ log_step "Phase 3: Agent enrollment token"
 
 log_info "Fetching enrollment token for policy: $AGENT_POLICY_ID"
 
-ENROLL_RESPONSE=$(docker exec kibana curl -sk \
-  -u "elastic:${ELASTIC_PASSWORD}" \
-  "https://localhost:5601/api/fleet/enrollment_api_keys" \
-  -H "kbn-xsrf: true")
+ENROLL_TOKEN=""
+for i in $(seq 1 10); do
+  ENROLL_RESPONSE=$(docker exec kibana curl -sk \
+    -u "elastic:${ELASTIC_PASSWORD}" \
+    "https://localhost:5601/api/fleet/enrollment_api_keys" \
+    -H "kbn-xsrf: true")
+  
+  # Parse JSON using portable tools, hiding non-zero exit codes with || true
+  TOKEN_CANDIDATE=$(echo "$ENROLL_RESPONSE" | sed 's/},/\n/g' | grep '"active":true' | grep "\"policy_id\":\"${AGENT_POLICY_ID}\"" | grep -o '"api_key":"[^"]*"' | cut -d'"' -f4 | head -n 1 || true)
+  
+  if [ -n "$TOKEN_CANDIDATE" ]; then
+    ENROLL_TOKEN="$TOKEN_CANDIDATE"
+    break
+  fi
+  echo -n "."
+  sleep 5
+done
 
-# Parse JSON using awk to find the active api_key for the specific policy_id
-ENROLL_TOKEN=$(echo "$ENROLL_RESPONSE" | sed 's/},/\n/g' | grep '"active":true' | grep "\"policy_id\":\"${AGENT_POLICY_ID}\"" | grep -o '"api_key":"[^"]*"' | cut -d'"' -f4 | head -n 1)
-
-[ -n "$ENROLL_TOKEN" ] || log_error "No active enrollment token found for policy '$AGENT_POLICY_ID'. Is Kibana Fleet configured?"
+[ -n "$ENROLL_TOKEN" ] || log_error "No active enrollment token found for policy '$AGENT_POLICY_ID'. Check Kibana Fleet status."
 
 update_env "ELASTIC_AGENT_ENROLLMENT_TOKEN" "$ENROLL_TOKEN"
 log_info "ELASTIC_AGENT_ENROLLMENT_TOKEN updated in .env"
