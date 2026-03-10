@@ -96,7 +96,10 @@ docker compose version >/dev/null 2>&1 || log_error "Docker Compose plugin is no
 [ -f "$ENV_FILE" ] || log_error ".env file not found. Create it from .env.example first."
 
 ELASTIC_PASSWORD=$(grep ^ELASTIC_PASSWORD "$ENV_FILE" | cut -d= -f2)
-[ -n "$ELASTIC_PASSWORD" ] || log_error "ELASTIC_PASSWORD is not set in .env"
+[n "$ELASTIC_PASSWORD" ] || log_error "ELASTIC_PASSWORD is not set in .env"
+
+log_info "Ensuring external volumes exist..."
+docker volume create app-logs >/dev/null 2>&1 || true
 
 log_info "Prerequisites OK"
 
@@ -154,6 +157,17 @@ if ! $FLEET_ONLY; then
   wait_healthy "kibana"   "Kibana"
 
   log_info "Core stack is healthy"
+
+  # ==============================================================================
+  # Phase 1.5: Setup Templates & Import Dashboard
+  # ==============================================================================
+  log_step "Phase 1.5: Setup Templates & Import Dashboard"
+  
+  log_info "Setting up Elasticsearch templates..."
+  bash scripts/setup_elastic_templates.sh || log_warn "Failed to setup templates"
+
+  log_info "Importing Kibana dashboard..."
+  bash scripts/import_kibana_dashboard.sh || log_warn "Failed to import dashboard"
 fi
 
 # ==============================================================================
