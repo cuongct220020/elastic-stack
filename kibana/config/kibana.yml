@@ -14,7 +14,7 @@ monitoring.ui.container.logstash.enabled: true
 ## https://www.elastic.co/docs/deploy-manage/security/self-setup
 ## https://www.elastic.co/docs/reference/kibana/commands/kibana-encryption-keys
 #
-xpack.security.encryptionKey: ${KIBANA_ENCRYPTION_KEY}
+xpack.security.encryptionKey: ${KIBANA_SECURITY_KEY}
 xpack.encryptedSavedObjects.encryptionKey: ${KIBANA_ENCRYPTION_KEY}
 xpack.reporting.encryptionKey: ${KIBANA_REPORTING_KEY}
 

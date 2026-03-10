@@ -190,7 +190,7 @@ services:
       # Cluster
       - cluster.name=${CLUSTER_NAME}
       - cluster.initial_master_nodes=es-01,es-02,es-03
-      - discovery.seed_hosts=es-02,es-03
+      - discovery.seed_hosts=es-01,es-03
       - node.name=es-02
       # JVM / memory
       - ES_JAVA_OPTS=-Xms${ES_HEAP_SIZE:-1g} -Xmx${ES_HEAP_SIZE:-1g}
@@ -346,7 +346,7 @@ services:
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
       - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
       # Server
-      - SERVERNAME=kibana
+      - SERVER_NAME=kibana
       # Encryption keys
       - KIBANA_ENCRYPTION_KEY=${KIBANA_ENCRYPTION_KEY}
       - KIBANA_REPORTING_KEY=${KIBANA_REPORTING_KEY}
@@ -355,6 +355,8 @@ services:
       - SERVER_SSL_ENABLED=true
       - SERVER_SSL_CERTIFICATE=config/certs/kibana/kibana.crt
       - SERVER_SSL_KEY=config/certs/kibana/kibana.key
+      # Node.js memory limit (prevent V8 from thrashing GC when close to 1g container limit)
+      - NODE_OPTIONS=--max-old-space-size=800
       # Timezone
       - TZ=Asia/Ho_Chi_Minh
       - LOG_LEVEL=warn
