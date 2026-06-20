@@ -11,14 +11,22 @@
 
 ## First-Time Deployment
 
-### Step 1: Build images
+### Step 1: Prepare environment
+
+Ensure the external volume for application logs exists:
+
+```bash
+docker volume create app-logs
+```
+
+### Step 2: Build images
 
 ```bash
 docker compose -f elk-multi-node-cluster.yml build
 docker compose -f fleet-compose.yml build
 ```
 
-### Step 2: Start the core stack
+### Step 3: Start the core stack
 
 ```bash
 docker compose -f elk-multi-node-cluster.yml up -d
@@ -32,7 +40,16 @@ docker ps --format "table {{.Names}}\t{{.Status}}"
 
 All of `es-01`, `es-02`, `es-03`, and `kibana` must show `(healthy)` before proceeding.
 
-### Step 3: Create the Fleet Server service token
+### Step 4: Configure Templates and Dashboards
+
+Apply index templates, ILM policies, and import the pre-configured Kibana dashboard.
+
+```bash
+bash scripts/setup_elastic_templates.sh
+bash scripts/import_kibana_dashboard.sh
+```
+
+### Step 5: Create the Fleet Server service token
 
 This must be an API-based token (stored in the ES cluster, not a file), so it replicates across all nodes.
 
@@ -53,7 +70,7 @@ Copy the `value` field from the output, then update `.env`:
 sed -i '' "s/^FLEET_SERVER_SERVICE_TOKEN=.*/FLEET_SERVER_SERVICE_TOKEN=<token_value>/" .env
 ```
 
-### Step 4: Get the Elastic Agent enrollment token
+### Step 6: Get the Elastic Agent enrollment token
 
 **Option A: via CLI**
 ```bash
@@ -75,13 +92,14 @@ sed -i '' "s/^ELASTIC_AGENT_ENROLLMENT_TOKEN=.*/ELASTIC_AGENT_ENROLLMENT_TOKEN=<
 
 ![kibana-web-ui.png](images/kibana-web-ui.png)
 
-1. Go to `Fleet` → `Enrollment tokens`
-2. Find the row with `Agent policy = General Agent Policy`
-3. Click the eye icon to reveal the token
-4. Copy and update `.env` manually
+1. Access https://localhost:5601
+2. Go to `Fleet` → `Enrollment tokens`
+3. Find the row with `Agent policy = General Agent Policy`
+4. Click the eye icon to reveal the token
+5. Copy and update `.env` manually
 
 
-### Step 5: Start Fleet Server
+### Step 7: Start Fleet Server
 
 ```bash
 docker compose -f fleet-compose.yml up -d fleet-server
@@ -95,13 +113,11 @@ until docker inspect fleet-server --format='{{.State.Health.Status}}' | grep -q 
 done && echo "Fleet Server is HEALTHY"
 ```
 
-### Step 6: Start Elastic Agent
+### Step 8: Start Elastic Agent
 
 ```bash
 docker compose -f fleet-compose.yml up -d elastic-agent
 ```
-
-
 
 ## Redeployment (after changes or restart)
 
@@ -150,7 +166,6 @@ docker compose -f fleet-compose.yml up -d elastic-agent
 ```bash
 docker compose -f fleet-compose.yml up -d --scale elastic-agent=3
 ```
-
 
 ## Troubleshooting
 

@@ -1,30 +1,16 @@
 # Self-managed Elastic Stack
 
-A production-ready, containerized Elastic Stack deployment with a 3-node Elasticsearch cluster, Kibana, Fleet Server, and Elastic Agent — all secured with TLS.
+A production-ready, containerized Elastic Stack deployment with a 3-node Elasticsearch cluster, Kibana, Fleet Server, and Elastic Agent. This stack implementation for auditing logs in distributed environments. 
 
-![elastic-stack](docs/images/elastic-stack.png)
-
+![audit-logs-lifecycle.png](docs/images/audit-logs-app-lifecycle.png)
 
 ## Prerequisites
 
-Before running the stack on a Linux host, configure the system for Elasticsearch:
+For production deployments on Linux, ensure the host system is properly tuned (e.g., swap disabled, file descriptors increased, and memory locks configured) according to the [Elasticsearch System Configuration guide](https://www.elastic.co/docs/deploy-manage/deploy/self-managed/important-system-configuration).
 
-```bash
-# Required: raise virtual memory limit
-sudo sysctl -w vm.max_map_count=262144
-
-# Persist across reboots
-echo "vm.max_map_count=262144" | sudo tee -a /etc/sysctl.conf
-```
-
-For a full production host setup (swap, file descriptors, memory lock, etc.):
-
-```bash
-sudo bash scripts/set_important_es_sysconfig.sh
-```
-
-An Ansible role is also available under `ansible/` for automated host configuration across multiple nodes.
-
+To streamline this configuration (check carefully before apply). 
+- **Manual configuration:** Use `scripts/set_important_es_sysconfig.sh` to apply recommended settings.
+- **Automated configuration:** Use the [Ansible playbooks](./ansible/) for consistent configuration across multiple nodes.
 
 ## Stack Overview
 
@@ -52,19 +38,31 @@ An Ansible role is also available under `ansible/` for automated host configurat
 | `elk-single-node-cluster.yml` | Single-node Elasticsearch + Kibana, security disabled. For local dev only. |
 
 
-## Deployment
+## Stack Deployment
 
 ### Automated (recommended)
 
 Copy and configure the environment file, then run the setup script:
-
 ```bash
 cp .env.example .env
-# Edit .env: set ELASTIC_PASSWORD, KIBANA_PASSWORD, and Kibana encryption keys
 
-bash setup_elastic_stack.sh
+# Fill some important variables in .env
+ELASTIC_PASSWORD=
+KIBANA_PASSWORD=
+
+# openssl rand -hex -32
+KIBANA_ENCRYPTION_KEY=
+KIBANA_REPORTING_KEY=
+KIBANA_SECURITY_KEY=
+MONGO_DB_USERNAME=
+MONGO_DB_PASSWORD=
+# MINIO_ROOT_USER=
+# MINIO_ROOT_PASSWORD=
 ```
 
+```bash
+bash setup_elastic_stack.sh
+```
 The script handles all steps end-to-end: building images, waiting for health checks, creating the Fleet Server service token, fetching the agent enrollment token, and starting Fleet Server and Elastic Agent in the correct order.
 
 **Options:**
@@ -74,7 +72,7 @@ bash setup_elastic_stack.sh --rebuild     # full teardown + rebuild
 bash setup_elastic_stack.sh --fleet-only  # redeploy Fleet Server + Agent only
 ```
 
-### Manual deployment
+### Manual deployment guide
 
 For a step-by-step walkthrough with explanations, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
@@ -82,45 +80,65 @@ For a step-by-step walkthrough with explanations, see [docs/DEPLOYMENT.md](docs/
 
 ```bash
 bash scripts/check_health.sh                # health check all services + verify token type
+bash scripts/cleanup_offline_agents.sh      # unenroll all offline agents
 bash scripts/rotate_fleet_server_token.sh   # rotate the Fleet Server service token
 bash scripts/get_agent_enrollment_token.sh  # fetch and update agent enrollment token
-bash scripts/cleanup_offline_agents.sh      # unenroll all offline agents
 bash scripts/setup_elastic_templates.sh     # apply ILM policies, component templates, and index templates
+bash scripts/import_kibana_dashboard.sh     # apply dashboard template
 ```
 
+### Log Collection Setup
 
-## Demo App and Audit Logs
-
-The `demo-app/` directory contains a FastAPI application that models a shared document repository. Every API action — create, read, update, soft-delete — is recorded as a structured ECS-compliant audit log event and shipped to Elasticsearch via Elastic Agent.
-
-The goal is to demonstrate a complete observability pipeline: application writes logs, Elastic Agent collects and ships them, Elasticsearch indexes them with a defined schema, and Kibana provides dashboards for analysis.
-
-For setup instructions, see [docs/AUDIT_LOGS_SETUP.md](docs/AUDIT_LOGS_SETUP.md).
-
-For Elasticsearch index design and ILM rationale, see [assets/README.md](assets/README.md).
-
-For application-level details (API endpoints, audit log schema, log file location), see [demo-app/README.md](demo-app/README.md).
+1. Access the Kibana UI at `https://localhost:5601`.
+2. Log in with username `elastic` and the password configured in your `.env` file.
+3. Navigate to **Fleet** > **Agent policies** and select the **General Agent Policy**.
+![kibana-fleet-agent-policy-1.png](docs/images/kibana-fleet-agent-policy-1.png)
+4. Click **Add integration** and search for **Custom Logs**. Configure it (e.g., as a Filestream) to read your application logs. Ensure the dataset or data stream is set to match your expected pattern (e.g., `logs-audit-*`).
+![kibana-fleet-agent-policy-2.png](docs/images/kibana-fleet-agent-policy-2.png)
 
 
-## Documentation
+**Note on Pre-configurations (CI/CD):** If you need to pre-configure Elasticsearch templates or Kibana dashboards, modify the JSON/NDJSON files in the `assets/` directory. These are used by the automated setup scripts to bootstrap the environment.
 
-### Guides
+```text
+assets/
+├── elasticsearch/
+│   ├── component-templates/
+│   ├── data-stream/
+│   ├── ilm-policies/
+│   ├── index-templates/
+│   └── ingest-pipelines/
+└── kibana/
+    ├── dashboards/
+    ├── index-pattern/
+    └── visualizations/
+```
 
-| File | What it covers |
-|---|---|
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Step-by-step instructions for deploying the full stack manually |
-| [docs/AUDIT_LOGS_SETUP.md](docs/AUDIT_LOGS_SETUP.md) | End-to-end setup for the audit logs pipeline: backend, templates, Kibana integration |
-| [docs/ELASTICSEARCH_API.md](docs/ELASTICSEARCH_API.md) | Cookbook of common Elasticsearch API calls for cluster management, querying, and debugging |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Design decisions: why 3-node, why Fleet over Filebeat, data flow, network topology |
+## Exploring Audit Logs
 
-### Service Configuration
+Since the dashboard templates and index configurations are applied automatically during setup, you can immediately begin analyzing data.
 
-| Directory | What it covers |
-|---|---|
-| [elasticsearch/README.md](elasticsearch/README.md) | Node configuration, memory and TLS settings, useful debug commands |
-| [kibana/README.md](kibana/README.md) | Kibana configuration, encryption keys, saved object export/import |
-| [beats/README.md](beats/README.md) | Overview of Fleet Server and Elastic Agent |
-| [beats/fleet/README.md](beats/fleet/README.md) | Fleet Server service token, TLS, startup dependencies |
-| [beats/agent/README.md](beats/agent/README.md) | Elastic Agent enrollment, volume mounts, scaling, policy management |
-| [assets/README.md](assets/README.md) | Elasticsearch index design: ILM policy, component templates, ingest pipeline |
-| [demo-app/README.md](demo-app/README.md) | API endpoints, audit log schema, ECS field reference |
+### 1. Verify Data Ingestion
+Navigate to **Analytics** > **Discover**. Select the `logs-audit-*` data view. You can use KQL (Kibana Query Language) to search and filter incoming log events.
+![kibana-discover.png](docs/images/kibana-discover.png)
+
+### 2. View Dashboards
+Navigate to **Analytics** > **Dashboards** and open the pre-built Audit Logs dashboard. You can customize existing panels or create new visualizations based on your requirements.
+![kibana-audit-logs-dashboard.png](docs/images/kibana-audit-logs-dashboard.png)
+
+## Visualizing Additional Data Sources
+
+To ingest and visualize entirely new types of data beyond the built-in audit logs, from Home to navigate **Stack Management** and follow the standard Elastic data management workflow:
+
+1. **Define Data Rules:** First, establish how Elasticsearch should process and store the new data. Create an Index Lifecycle Policy (ILM), Index Template, and (if necessary) an Ingest Pipeline tailored to your new data source.
+![kibana-index-template-setup.png](docs/images/kibana-index-template-setup.png)
+
+2. **Create a Data View:** Make the new indices searchable in Kibana. Navigate to **Stack Management** > **Data Views** and create a view matching your new index pattern.
+![kibana-data-view.png](docs/images/kibana-data-view.png)
+
+3. **Analyze:** Return to **Analytics** > **Discover** or **Dashboards** to query the new data and build custom visualizations.
+
+## Further development
+
+Currently, the S3-compatible snapshot repository setup with MinIO (`storage-compose.yml`) is a manual post-deployment step. To fully automate this, future development should consider:
+- Incorporating the startup of MinIO services (`storage-compose.yml`) into the main deployment flow.
+- Integrating `scripts/setup_minio_repository.sh` into `setup_elastic_stack.sh` to automatically inject S3 credentials into the Elasticsearch keystore and register the repository via API.
